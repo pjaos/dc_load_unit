@@ -1,0 +1,5 @@
+# Debug load
+netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
+
+# Debug heap
+netplot_spd --text=heap=,heap_free=,heap_min= --debug
