@@ -1,0 +1,69 @@
+author: mongoose-os
+description: A Mongoose OS app skeleton
+version: 1.0
+
+libs_version: ${mos.version}
+modules_version: ${mos.version}
+mongoose_os_version: ${mos.version}
+
+# Optional. List of tags for online search.
+tags:
+  - c
+
+# List of files / directories with C sources. No slashes at the end of dir names.
+sources:
+  - src
+
+includes:
+  - include
+
+# List of dirs. Files from these dirs will be copied to the device filesystem
+filesystem:
+  - fs
+
+#Define the configuration attributes here
+config_schema:
+ - ["i2c.enable",   "b", true, {title: "Enable I2C"}]
+ - ["i2c.debug",    "b", false, {title: "Debug I2C"}]
+ - ["i2c.sda_gpio", "i", 22, {title: "GPIO to use for SDA"}]
+ - ["i2c.scl_gpio", "i", 21, {title: "GPIO to use for SCL"}]
+ - ["i2c.freq",     "i", 400000, {title: "I2C bus speed (Hz)"}]
+ - ["i2c.unit_no",  "i", 0, {title: "Which hardware unit to use, 0 or 1"}]
+# Set debug level to 4 for debug level messages 
+# - ["debug.level", 4]
+
+#These are user configurable attributes
+ - ["ydev",               "o",             {title: "Holds attributes that the user may configure."}]
+ - ["user.product_id",    "s", "YDC_LOAD", {title: "The Y product ID (before WiFi setup this is part of AP SSID)"}]
+ - ["ydev.product_id",    "s", "YDC_LOAD", {title: "The Y product ID (after WiFi setup this is part of AP SSID)"}]
+ - ["ydev.unit_name",     "s", "DC_LOAD",  {title: "The name for the device."}]
+ - ["ydev.group_name",    "s", "",         {title: "The yView group name."}]
+ - ["ydev.enable_syslog", "b", false,      {title: "Enable syslogging."}]
+
+libs:
+ - origin: https://github.com/mongoose-os-libs/boards
+ - origin: https://github.com/mongoose-os-libs/ca-bundle
+ - origin: https://github.com/mongoose-os-libs/http-server
+ - origin: https://github.com/mongoose-os-libs/rpc-service-config
+ - origin: https://github.com/mongoose-os-libs/rpc-service-fs
+ - origin: https://github.com/mongoose-os-libs/rpc-uart
+ - origin: https://github.com/mongoose-os-libs/rpc-service-gpio.git
+ - origin: https://github.com/mongoose-os-libs/wifi
+ - origin: https://github.com/mongoose-os-libs/ota-common
+ - origin: https://github.com/mongoose-os-libs/ota-http-server
+ - origin: https://github.com/mongoose-os-libs/spi
+ - origin: https://github.com/mongoose-os-libs/pwm
+ - origin: https://github.com/mongoose-os-libs/rpc-service-i2c.git
+# PJA libs
+ - origin: git@github.com:pjaos/syslog.git
+ - origin: git@github.com:pjaos/wifi_button_setup.git
+ - origin: ssh://pja@pjas:22//mnt/home_storage/git_repos/mgos/libs/ydev_ayt_handler.git
+ - origin: ssh://pja@pjas:22/mnt/home_storage/git_repos/mgos/libs/ads111x.git
+
+cdefs:
+ MG_ENABLE_DNS: 1
+ MG_ENABLE_DNS_SERVER: 1
+ MGOS_ENABLE_I2C_GPIO: 1
+
+# Used by the mos tool to catch mos binaries incompatible with this file format
+manifest_version: 2017-09-29
