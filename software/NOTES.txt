@@ -3,3 +3,12 @@ netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
 
 # Debug heap
 netplot_spd --text=heap=,heap_free=,heap_min= --debug
+
+#Calling rest IF
+
+curl http://192.168.0.245/rpc/ydev.update_syslog
+curl http://192.168.0.245/rpc/ydev.pwm -d '{"pwm":0.5}'
+curl http://192.168.0.245/rpc/ydev.target_amps -d '{"amps":1.1}'
+curl http://192.168.0.245/rpc/ydev.target_power -d '{"watts":10}'
+curl http://192.168.0.245/rpc/ydev.reset_temp_alarm
+curl http://192.168.0.245/rpc/ydev.debug -d '{"level":2}' # 2= info, -1=off, 4 = debug

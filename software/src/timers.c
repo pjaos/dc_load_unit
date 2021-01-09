@@ -39,6 +39,7 @@ extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 //Note The target value can either be the required amps or the required power, not both
 float target_amps = 0.0;
 float target_watts = 0.0;
+bool  temp_alarm = false;
 
 /**
  * @brief Callback to send periodic updates of the memory and file system state.
@@ -51,7 +52,7 @@ static void mem_usage_cb(void *arg) {
     size_t fs_size            = mgos_get_fs_size();
     size_t fs_free_size       = mgos_get_free_fs_size();
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "uptime=%.2lf, heap=%d, heap_free=%d heap_min=%d, total_disk_space=%d, free_disk_space=%d",  mgos_uptime(), heap_zize, free_heap_size, min_free_heap_size, fs_size, fs_free_size);
-    log_msg(syslog_msg_buf);
+    log_msg(LL_INFO, syslog_msg_buf);
     (void) arg;
 }
 
@@ -85,8 +86,8 @@ static float get_temp(void) {
     float mcp9700_volts = temp_adc / MCP9700_CODES_PER_VOLT;
     float tempC = ( mcp9700_volts - MCP9700_VOUT_0C ) / MCP9700_TC;
 
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "temp_adc=0x%04x, mcp9700_volts=%.3f, tempC=%.1f C", temp_adc, mcp9700_volts, tempC);
-    log_msg(syslog_msg_buf);
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "temp_adc=0x%04x, mcp9700_volts=%.3f, tempC=%.1f C, temp_alarm=%d", temp_adc, mcp9700_volts, tempC, temp_alarm);
+    log_msg(LL_INFO, syslog_msg_buf);
 
     return tempC;
 }
@@ -104,7 +105,7 @@ static float get_voltage(void) {
     }
 
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=0x%04x voltage=%.3f", voltage_adc, voltage);
-    log_msg(syslog_msg_buf);
+    log_msg(LL_INFO, syslog_msg_buf);
 
     return voltage;
 }
@@ -123,7 +124,6 @@ static float get_current(uint8_t off) {
         no_amps_mv = adc_value / CURRENT_ADC_CODES_TO_MV;
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "no_amps_mv=%.1f", no_amps_mv);
         mgos_syslog_log_info(__FUNCTION__, syslog_msg_buf);
-        LOG(LL_INFO, (syslog_msg_buf) );
     }
 
     float sensor_mv = adc_value / CURRENT_ADC_CODES_TO_MV;
@@ -135,12 +135,23 @@ static float get_current(uint8_t off) {
     }
 
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "current_adc=0x%04x, sensor_mv=%.1f, measured_mv=%.1f, amps=%.3f", adc_value, sensor_mv, measured_mv, amps);
-    log_msg(syslog_msg_buf);
+    log_msg(LL_INFO, syslog_msg_buf);
 
     return amps;
 }
 
+/**
+ * @brief Reset a temperature alarm.
+ */
+void reset_temp_alarm(void) {
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "reset_temp_alarm():" );
+    log_msg(LL_INFO, syslog_msg_buf);
 
+    if( temp_alarm ) {
+        temp_alarm = false;
+        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "reset_temp_alarm() TEMP ALARM HAS BEEN RESET" );
+    }
+}
 
 /***
  * @brief Called periodically to read the temperature of the heat sink.
@@ -157,8 +168,9 @@ static void temp_cb(void *arg) {
 
     if( temp >= MAX_HEATSINK_TEMP ) {
         set_load(0.0);
+        temp_alarm = true;
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! MAX TEMP REACHED (%.1f/%.1f C). TURNED OFF LOAD !!!", temp, MAX_HEATSINK_TEMP );
-        log_msg(syslog_msg_buf);
+        log_msg(LL_INFO, syslog_msg_buf);
     }
 
 }
@@ -188,7 +200,7 @@ static void pid_loop_cb(void *arg) {
     }
 
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "watts=%.3f, Took %d us to read the voltage, took %d us to read the current. Total %d us.", watts, (int)(v_read_t-start_t), (int)(a_read_t-v_read_t), (int)(a_read_t-start_t) );
-    log_msg(syslog_msg_buf);
+    log_msg(LL_INFO, syslog_msg_buf);
 
     (void) arg;
 }
@@ -202,7 +214,7 @@ static void pid_loop_cb(void *arg) {
 void set_load(float factor) {
     mgos_pwm_set(PWM_PIN, PWM_FREQ, factor);
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "PWM LOAD VALUE: %.3f", factor);
-    log_msg(syslog_msg_buf);
+    log_msg(LL_INFO, syslog_msg_buf);
 }
 
 /**

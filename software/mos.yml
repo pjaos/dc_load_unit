@@ -30,7 +30,7 @@ config_schema:
  - ["i2c.freq",     "i", 400000, {title: "I2C bus speed (Hz)"}]
  - ["i2c.unit_no",  "i", 0, {title: "Which hardware unit to use, 0 or 1"}]
 # Set debug level to 4 for debug level messages 
-# - ["debug.level", 4]
+# - ["debug.level", 2]
 
 #These are user configurable attributes
  - ["ydev",               "o",             {title: "Holds attributes that the user may configure."}]

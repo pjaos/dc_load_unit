@@ -5,7 +5,9 @@
 #include "ayt_tx_handler.h"
 #include "timer.h"
 #include "rpc_handler.h"
+#include "log.h"
 
+extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
 /*
  * @brief Callback handler to set the device to factory defaults. This will
@@ -147,6 +149,52 @@ static void mgos_rpc_ydev_set_watts(struct mg_rpc_request_info *ri,
 }
 
 /*
+ * @brief Callback handler to set set the target watts value.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void reset_temp_alarm_cb(struct mg_rpc_request_info *ri,
+                                         void *cb_arg,
+                                         struct mg_rpc_frame_info *fi,
+                                         struct mg_str args) {
+    reset_temp_alarm();
+    mg_rpc_send_responsef(ri, "");
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+static void mgos_sys_set_debug_handler(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    int level = _LL_MIN;
+    if (json_scanf(args.p, args.len, ri->args_fmt, &level) == 1) {
+        if (level > _LL_MIN && level < _LL_MAX) {
+            mg_rpc_send_responsef(ri, "%d", level);
+            snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "level=%d", level);
+            log_msg(LL_INFO, syslog_msg_buf);
+            cs_log_set_level((enum cs_log_level) level);
+        }
+        else {
+            mg_rpc_send_errorf(ri, -1, "Invalid debug level (-1 to 4 are valid).");
+        }
+    } else {
+      mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"level\":value}");
+    }
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
  * @brief Init all the RPC handlers.
  */
 void rpc_init(void) {
@@ -158,5 +206,7 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "ydev.pwm", "{pwm: %f}", mgos_rpc_ydev_set_pwm, NULL);
         mg_rpc_add_handler(con, "ydev.target_amps", "{amps: %f}", mgos_rpc_ydev_set_amps, NULL);
         mg_rpc_add_handler(con, "ydev.target_power", "{watts: %f}", mgos_rpc_ydev_set_watts, NULL);
+        mg_rpc_add_handler(con, "ydev.reset_temp_alarm", NULL, reset_temp_alarm_cb, NULL);
+        mg_rpc_add_handler(con, "ydev.debug", "{level: %d}", mgos_sys_set_debug_handler, NULL);
 
 }

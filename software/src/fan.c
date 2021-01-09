@@ -1,6 +1,7 @@
 #include <mgos.h>
 #include <mgos_gpio.h>
 
+#include "log.h"
 #include "fan.h"
 
 #define FAN1_GPIO 27
@@ -15,6 +16,8 @@
 #define FAN4_THRESHOLD_TEMP 35
 #define FAN5_THRESHOLD_TEMP 50
 #define FAN_TEMP_HYSTERESIS  1
+
+extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
 /**
  * @brief Set the fan on/off state.
@@ -37,7 +40,9 @@ void set_fan_state(uint8_t fan_id, bool on) {
     else if( fan_id == FAN5 ) {
         mgos_gpio_write(FAN5_GPIO, on);
     }
-    LOG(LL_INFO, ("%s: FAN: %d, state: %d", __FUNCTION__, fan_id, on));
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "%s: FAN: %d, state: %d", __FUNCTION__, fan_id, on);
+    log_msg(LL_INFO, syslog_msg_buf);
+
 }
 
 /**
