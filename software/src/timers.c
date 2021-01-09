@@ -8,6 +8,7 @@
 #include "mgos_time.h"
 #include "timer.h"
 #include "fan.h"
+#include "log.h"
 
 #define SYSLOG_MSG_BUF_SIZE 132                   //The maximum size +1 (null character) of syslog messages.
 #define ADS111X_I2C_ADDRESS 72
@@ -33,21 +34,11 @@
 
 #define MAX_HEATSINK_TEMP 79.0
 
-static char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];  //The buffer to load syslog messages into ready for transmission.
+extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
 //Note The target value can either be the required amps or the required power, not both
 float target_amps = 0.0;
 float target_watts = 0.0;
-
-/**
- * @brief Send a log message to the serial port and syslog (if enabled)
- */
-static void log_msg(char *msg) {
-    LOG(LL_INFO, (msg) );
-    if( mgos_sys_config_get_ydev_enable_syslog() ) {
-      mgos_syslog_log_info(__FUNCTION__, syslog_msg_buf);
-    }
-}
 
 /**
  * @brief Callback to send periodic updates of the memory and file system state.
