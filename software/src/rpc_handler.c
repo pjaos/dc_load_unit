@@ -2,6 +2,7 @@
 #include <mgos_rpc.h>
 #include <mgos_syslog.h>
 
+#include "wifi_setup.h"
 #include "ayt_tx_handler.h"
 #include "timer.h"
 #include "rpc_handler.h"
@@ -195,18 +196,127 @@ static void mgos_sys_set_debug_handler(struct mg_rpc_request_info *ri,
 }
 
 /*
+ * @brief Callback handler to get the config from the device.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_get_config(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+    char *unit_name = (char *)mgos_sys_config_get_ydev_unit_name();
+    char *group_name = (char *)mgos_sys_config_get_ydev_group_name();
+    uint8_t syslog_enabled = mgos_sys_config_get_ydev_enable_syslog();
+    uint32_t max_pp_count = mgos_sys_config_get_ydev_max_pp_count();
+
+    if( unit_name == NULL ) {
+        unit_name = "";
+    }
+
+    if( group_name == NULL ) {
+        group_name = "";
+    }
+
+    mg_rpc_send_responsef(ri, "{"
+                              "unit_name:%Q,"
+                              "group_name:%Q,"
+                              "syslog_enabled:%d,"
+                              "max_pp_count:%d"
+                              "}"
+                              ,
+                              unit_name,
+                              group_name,
+                              syslog_enabled,
+                              max_pp_count);
+
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+#define SET_CONFIG_RPC_JSON_STRING "{dev_name:%Q,"\
+"group_name:%Q,"\
+"enable_syslog:%d,"\
+"max_pp_count:%d}"
+
+#define SET_CONFIG_JSON_SCANF_ARGS &dev_name,\
+&group_name,\
+&enable_syslog,\
+&max_pp_count
+
+/**
+ * @brief useful for logging the text of the received messages.
+ */
+static void log_mg_str(struct mg_str *args) {
+
+    char *buf = (char *) malloc(args->len+1);
+    if( buf ) {
+        memset(buf, 0, args->len+1);
+        memcpy(buf, args->p, args->len);
+        LOG(LL_INFO, ("RPC RX: %s", buf));
+        free(buf);
+    }
+}
+
+/*
+ * @brief Callback handler to allow the user parameters be set from the web page.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_set_config(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+    char *dev_name=NULL;
+    char *group_name=NULL;
+    int  enable_syslog=0;
+    int  max_pp_count=0;
+
+    log_mg_str(&args);
+
+    json_scanf(args.p, args.len, ri->args_fmt, SET_CONFIG_JSON_SCANF_ARGS);
+
+    mgos_sys_config_set_ydev_unit_name(dev_name);
+    mgos_sys_config_set_ydev_group_name(group_name);
+    mgos_sys_config_set_ydev_enable_syslog(enable_syslog);
+    mgos_sys_config_set_ydev_max_pp_count(max_pp_count);
+    saveConfig();
+
+    mg_rpc_send_responsef(ri, NULL);
+
+    if (dev_name) {
+        free(dev_name);
+    }
+    if (group_name) {
+        free(group_name);
+    }
+
+    (void)cb_arg;
+    (void)fi;
+    (void)args;
+}
+
+/*
  * @brief Init all the RPC handlers.
  */
 void rpc_init(void) {
 
         struct mg_rpc *con = mgos_rpc_get_global();
 
-        mg_rpc_add_handler(con, "ydev.factorydefault", NULL, mgos_rpc_ydev_factorydefault, NULL);
-        mg_rpc_add_handler(con, "ydev.update_syslog", NULL, mgos_rpc_ydev_update_syslog, NULL);
-        mg_rpc_add_handler(con, "ydev.pwm", "{pwm: %f}", mgos_rpc_ydev_set_pwm, NULL);
-        mg_rpc_add_handler(con, "ydev.target_amps", "{amps: %f}", mgos_rpc_ydev_set_amps, NULL);
-        mg_rpc_add_handler(con, "ydev.target_power", "{watts: %f}", mgos_rpc_ydev_set_watts, NULL);
-        mg_rpc_add_handler(con, "ydev.reset_temp_alarm", NULL, reset_temp_alarm_cb, NULL);
-        mg_rpc_add_handler(con, "ydev.debug", "{level: %d}", mgos_sys_set_debug_handler, NULL);
+        mg_rpc_add_handler(con, "factorydefault", NULL, mgos_rpc_ydev_factorydefault, NULL);
+        mg_rpc_add_handler(con, "update_syslog", NULL, mgos_rpc_ydev_update_syslog, NULL);
+
+        mg_rpc_add_handler(con, "get_config", NULL, mgos_rpc_get_config, NULL);
+        mg_rpc_add_handler(con, "set_config", SET_CONFIG_RPC_JSON_STRING, mgos_rpc_set_config, NULL);
+
+        mg_rpc_add_handler(con, "pwm", "{pwm: %f}", mgos_rpc_ydev_set_pwm, NULL);
+        mg_rpc_add_handler(con, "target_amps", "{amps: %f}", mgos_rpc_ydev_set_amps, NULL);
+        mg_rpc_add_handler(con, "target_power", "{watts: %f}", mgos_rpc_ydev_set_watts, NULL);
+        mg_rpc_add_handler(con, "reset_temp_alarm", NULL, reset_temp_alarm_cb, NULL);
+        mg_rpc_add_handler(con, "debug", "{level: %d}", mgos_sys_set_debug_handler, NULL);
 
 }

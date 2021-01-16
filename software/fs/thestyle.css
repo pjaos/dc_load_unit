@@ -239,7 +239,7 @@ body {font-family: Arial, Helvetica, sans-serif;}
   padding: 14px 16px;
   transition: 0.3s;
   font-size: 17px;
-  width: 33%;        #This must be set for the number of tabs you have
+  width: 25%;        #This must be set correctly for the number of tabs you have
 }
 
 /* Change background color of buttons on hover */

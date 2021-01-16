@@ -1,31 +1,42 @@
-const CONFIG_OPT    = "config";
-const YDEV_OPT      = "ydev";
-const MIN_FREQ_MHZ  = 138;
-const MAX_FREQ_MHZ  = 4400;
 
 var devNameLabel         = document.getElementById("devNameLabel");
-var devNameText          = document.getElementById("devNameText");
-var groupNameText        = document.getElementById("groupNameText");
-var syslogEnableCheckbox = document.getElementById("syslogEnableCheckbox");
-var opFreqNumber         = document.getElementById("opFreqNumber");
+var setAmpsButton        = document.getElementById("set_current");
+var setWattsButton       = document.getElementById("set_watts");
 
-var tab2Button           = document.getElementById("tab2Button");
-var setConfigButton      = document.getElementById("setConfigButton");
-var setDefaultsButton    = document.getElementById("setDefaultsButton");
-var rebootButton         = document.getElementById("rebootButton");
-var rfLevelM4            = document.getElementById("rfLevelM4");
-var rfLevelM1            = document.getElementById("rfLevelM1");
-var rfLevel2             = document.getElementById("rfLevel2");
-var rfLevel5             = document.getElementById("rfLevel5");
-var rfStateOn            = document.getElementById("rfStateOn");
-var rfStateOff           = document.getElementById("rfStateOff");
-var cmdHistoryDiv        = document.getElementById("cmd_history");
+var setConfigButton = document.getElementById("setConfigButton");
+var factoryDefaultsButton = document.getElementById("setDefaultsButton");
+var rebootButton = document.getElementById("rebootButton");
 
-var deviceConfig = {}; //Holds the device configuration and is loaded
-                       //when updateView() is called.
+var titleLabel = document.getElementById("titleLabel");
+var devNameField = document.getElementById("devNameText");
+var groupNameField = document.getElementById("groupNameText");
+var enableSyslogCB = document.getElementById("syslogEnableCheckbox");
+var maxPwrPlotPointsField = document.getElementById("maxPwrPlotPoints");
+
+var maxPlotPointsIPF     = document.getElementById("maxPwrPlotPoints");
+var wattsDateTimeList    = [];
+var wattsList = [];
+
+var ampsDateTimeList    = [];
+var ampsList = [];
+
+var voltsDateTimeList    = [];
+var voltsList = [];
+
+const guageSize    = 250;
+
+var maxWatts=1;
+var wattsGauge = null;
+
+var maxAmps = 1;
+var ampsGauge = null;
+
+var maxVolts = 1;
+var voltsGauge = null;
+
 
 /**
- * @brief A USerOutput class responsible for displaying log messages
+ * @brief A UserOutput class responsible for displaying log messages
  **/
 class UO {
    /**
@@ -73,254 +84,280 @@ class UO {
 var uo = new UO(true);
 
 /**
- * @brief log text to the log message area on the page.
- * @param msg
- *            The text message to be displayed.
+ * @brief Add to a time series plot
+ * @param yValue The value list.
+ * @param yValueList A list Y range values on a plot.
+ * @param
+ * @returns
  */
-var logCmd = function(msg) {
-    var curentLog = cmdHistoryDiv.innerHTML;
+function addToTimeSeries(yValue, xValueTimeList, yValueList) {
     var now = new Date();
-    var dataTimeString = now.toUTCString();
-    msg = dataTimeString+": "+msg;
-    var newLog = msg + "<BR>" + curentLog;
-    cmdHistoryDiv.innerHTML = newLog;
-};
+    var hours = now.getHours();
+    var minutes = now.getMinutes();
+    var seconds = now.getSeconds();
+    var tenthSeconds = now.getMilliseconds() / 100;
+    var formattedDateTime = "" + hours.toString().padStart(2, "0") + ":"
+            + minutes.toString().padStart(2, "0") + ":" + seconds;
+
+    xValueTimeList.push(formattedDateTime);
+    yValueList.push(yValue);
+}
+
+/**
+ * @brief Limit the maximum number of plot points.
+ * @param xValueList A list of x Value on a plot.
+ * @param yValueList A list of y Value on a plot.
+ * @returns
+ */
+function limitMaxPlotPoint(xValueList, yValueList) {
+    var maxPlotPoints = parseInt(maxPlotPointsIPF.value);
+    // Limit the plot size so it does not slow down the browser.
+    if (xValueList.length > maxPlotPoints) {
+        // Randomly remove an element from the list leaving the first
+        // to preserve the length of the plot.
+        indexToDel = getRandomInt(1, maxPlotPoints);
+        xValueList.splice(indexToDel, 1);
+        yValueList.splice(indexToDel, 1);
+    }
+}
+
+/**
+ * @brief Get a trace instance.
+ * @param traceName The name of the plot trace to add
+ * @param xValueList A list of x Value on a plot.
+ * @param yValueList A list of y Value on a plot.
+ * @returns
+ */
+function getTrace(traceName, xValueList, yValueList) {
+ //PJA   traceColour = 'rgb(0, 102, 0)';
+    trace = {
+            opacity : 0,
+            name : traceName,
+            x : xValueList,
+            y : yValueList,
+            fill : 'tozeroy',
+            type : 'scatter',
+            line : {
+//PJA                color : traceColour,
+                width : 0,
+                shape : 'spline'
+            },
+        }
+    return trace
+}
+
+/**
+ * @brief Get A layout for a time series plot.
+ * @param yAxisLabel The Y axis label.
+ * @returns
+ */
+function getTimePlotLayout(yAxisLabel) {
+    var layout = {
+            xaxis : {
+                title : 'Time',
+            },
+            yaxis : {
+                title : yAxisLabel,
+            },
+        };
+    return layout
+}
+
+/**
+ * @brief Plot data on a plot
+ * @param plotCanvasName The name of the plot canvas in the html file.
+ * @param traceList A list of traces to plot.
+ * @param layout The layout to use to plot.
+ * @returns 
+ */
+function plot(plotCanvasName, traceList, layout) {
+    // As Plotly is to big to fit in the devices flash it is downloaded direct
+    // and therefore may not be found so wrap in a try/catch block so the
+    // javascript runs if Plotly is not available.
+    try {
+        Plotly.newPlot(plotCanvasName, traceList, layout, {
+            responsive : true
+        });
+    } catch (err) {
+    }
+}
+
+/**
+ * @brief Plot watts
+ * @param watts The DC load in watts.
+ */
+function plotWatts(watts) {
+
+    var layout = getTimePlotLayout("Watts");
+
+    limitMaxPlotPoint(wattsDateTimeList, wattsList);
+    
+    addToTimeSeries(watts, wattsDateTimeList, wattsList);
+
+    var trace = getTrace("Power", wattsDateTimeList, wattsList);
+
+    plot('wattsPlotArea', [ trace ], layout);
+
+    return trace;
+}
+
+/**
+ * @brief Plot amps
+ * @param amps The DC load in amps.
+ */
+function plotAmps(amps) {
+
+    var layout = getTimePlotLayout("Amps");
+
+    limitMaxPlotPoint(ampsDateTimeList, ampsList);
+    
+    addToTimeSeries(amps, ampsDateTimeList, ampsList);
+
+    var trace = getTrace("Current", ampsDateTimeList, ampsList);
+
+    plot('ampsPlotArea', [ trace ], layout);
+
+    return trace;
+}
+
+/**
+ * @brief Plot vols
+ * @param volts The DC voltage in volts.
+ */
+function plotVolts(volts) {
+
+    var layout = getTimePlotLayout("Volts");
+
+    limitMaxPlotPoint(voltsDateTimeList, voltsList);
+    
+    addToTimeSeries(volts, voltsDateTimeList, voltsList);
+
+    var trace = getTrace("Voltage", voltsDateTimeList, voltsList);
+
+    plot('voltsPlotArea', [ trace ], layout);
+
+    return trace;
+}
+
+
+/**
+ * @brief Get a radial guage instantiation.
+ * @param renderCanvas
+ * @param guageSize
+ * @param title
+ * @param units
+ * @param maxValue
+ * @param majorTickCount
+ * @param decimalPlaces
+ * @returns A RadialGuage object.
+ */
+function getRadialGauge(renderCanvas, guageSize, title, units, maxValue, majorTickCount, decimalPlaces) {
+    var increment=maxValue/(majorTickCount-1);
+    var tickValue=0;
+    var maxList = [];
+    for (i = 0; i < majorTickCount; i++) { 
+        maxList.push(tickValue.toFixed(decimalPlaces));
+        tickValue=tickValue+increment;
+    }
+
+    theGauge = new RadialGauge({
+        renderTo: renderCanvas,
+        width: guageSize,
+        height: guageSize,
+        title: title, 
+        units: units,
+        minValue: 0,
+        maxValue: maxValue,
+        majorTicks: maxList,
+        minorTicks: 5,
+        strokeTicks: true,
+        highlights: [
+            {
+                "from": 0,
+                "to": maxValue,
+                "color": "rgba(157,172,181, .75)"
+            }
+        ],
+    });
+    return theGauge;
+}
+
+/**
+ * @brief Init the watts guage.
+ * @returns A RadialGuage object for measuring watts.
+ */
+function createWattsGauge() {
+    wattsGauge = getRadialGauge('watts-gauge-canvas',guageSize, 'Power',"Watts", maxWatts, 7, 1 );
+    wattsGauge.draw();
+}
+
+/**
+ * @brief Init the amps guage.
+ * @returns A RadialGuage object for measuring amps.
+ */
+function createAmpsGauge() {
+    ampsGauge = getRadialGauge('amps-gauge-canvas',guageSize, 'Current',"Amps", maxAmps, 7, 1 );
+    ampsGauge.draw();
+}
+
+/**
+ * @brief Init the volts guage.
+ * @returns A RadialGuage object for measuring volts.
+ */
+function createVoltsGauge() {
+    voltsGauge = getRadialGauge('volts-gauge-canvas',guageSize, 'Voltage',"Volts", maxVolts, 7, 1 );
+    voltsGauge.draw();
+}
+
 
 /**
  * @brief Update the view of the device.
+ * @param updateConfig If True the the config is updated. False no config is updated.
  **/
-function updateView() {
-  uo.debug("updateView()");
-  $.ajax({
-    url: '/rpc/Config.Get',
-    success: function(data) {
-    deviceConfig = data;
+function updateView(updateConfig) {
+      uo.debug("updateView()");
 
-    //This shows all the config options available on the device.
-    //uo.info(data);
-    console.log(data);
-    //Get the subsection specific to yView devices.
-    var yDevConfig = data['ydev'];
+      if( updateConfig ) {
+          getConfig();
+      }
 
-    devNameText.value = yDevConfig["unit_name"];
-    devNameLabel.innerHTML = devNameText.value;
-    groupNameText.value = yDevConfig["group_name"];
-    syslogEnableCheckbox.checked = yDevConfig['enable_syslog'];
-    opFreqNumber.value = yDevConfig["output_mhz"].toFixed(1);
-
-    var rfLevel = yDevConfig["rf_level"];
-    if( rfLevel == -4 ) {
-      rfLevelM4.checked=true;
-    }
-    else if( rfLevel == -1 ) {
-      rfLevelM1.checked=true;
-    }
-    else if( rfLevel == 2 ) {
-      rfLevel2.checked=true;
-    }
-    else if( rfLevel == 5 ) {
-      rfLevel5.checked=true;
-    }
-    else {
-      uo.error("Invalid level: "+rfLevel);
-    }
-
-    var rfOn = yDevConfig["rf_on"];
-    if( rfOn ) {
-      rfStateOn.checked=true;
-    }
-    else {
-      rfStateOff.checked=true;
-    }
-
-    },
-  });
+      //PJA REMOVE
+      plotWatts(0);
+      plotAmps(0);
+      plotVolts(0);
+      
+      createWattsGauge();
+      createAmpsGauge();
+      createVoltsGauge();
 }
 
-/**
- * @brief Set the output frequency.
- **/
-function setFreqAction() {
-  uo.debug("setFreqAction()");
-  if( opFreqNumber.value >= MIN_FREQ_MHZ && opFreqNumber.value <= MAX_FREQ_MHZ ) {
-    let configData = {arg0: opFreqNumber.value};
-    let jsonStr = JSON.stringify(configData);
-    uo.debug("jsonStr="+jsonStr);
-
+function getConfig() {
+    uo.debug("getStatus()");
     $.ajax({
-      url: '/rpc/ydev.set_freq_mhz',
-      data: jsonStr,
-      type: 'POST',
-      success: function(data) {
-        logCmd("Set frequency to "+opFreqNumber.value+" MHz");
-      },
-    })
-  }
-  else {
-    alert(opFreqNumber.value+" is invalid. Valid range = "+MIN_FREQ_MHZ+" to "+MAX_FREQ_MHZ+" MHz.")
-  }
-}
-
-/**
- * @brief Set the output frequency if user pressed enter in freq field.
- **/
-function setFreqActionEnter(k) {
-  if (k.code == 'Enter') {    // only if the key is "Enter"...
-    setFreqAction();
-  }
-  return false;               // no propagation or default
-}
-
-
-
-
-/**
- * @brief Set the output level in dBm.
- **/
-function setLevelAction() {
-  var rfLevel = 0;
-  if( rfLevelM4.checked ) {
-      rfLevel=-4;
-  }
-  else if( rfLevelM1.checked ) {
-    rfLevel = -1;
-  }
-  else if( rfLevel2.checked ) {
-    rfLevel=2;
-  }
-  else if( rfLevel5.checked ) {
-    rfLevel=5;
-  }
-
-  if( rfLevel ) {
-    let configData = {arg0: rfLevel};
-    let jsonStr = JSON.stringify(configData);
-    uo.debug("jsonStr="+jsonStr);
-    $.ajax({
-      url: '/rpc/ydev.set_level_dbm',
-      data: jsonStr,
-      type: 'POST',
-      success: function(data) {
-        logCmd("Set RF output level to "+rfLevel+" dBm");
-      },
-    })
-  }
-
-}
-
-/**
- * @brief Set the output on/off.
- **/
-function setOnOffAction() {
-  var outputOn = -1;
-  if( rfStateOn.checked ) {
-    outputOn=1;
-  }
-  else if( rfStateOff.checked ) {
-    outputOn=0;
-  }
-
-  if( outputOn == 1 || outputOn == 0 ) {
-    let configData = {arg0: outputOn};
-    let jsonStr = JSON.stringify(configData);
-    uo.debug("jsonStr="+jsonStr);
-    $.ajax({
-      url: '/rpc/ydev.rf_on',
-      data: jsonStr,
-      type: 'POST',
-      success: function(data) {
-        if( outputOn ) {
-          logCmd("Set RF output ON");
-        }
-        else {
-          logCmd("Set RF output OFF");
-        }
-      },
-    })
-  }
-}
-
-/**
- * @brief Called when the Save button is selected.
- **/
-function setDeviceConfig() {
-  uo.debug("setDeviceConfig()");
-  let configData = {};
-  configData[CONFIG_OPT] = {};
-  configData[CONFIG_OPT][YDEV_OPT] = {};
-  configData[CONFIG_OPT][YDEV_OPT]["unit_name"]     = devNameText.value;
-  configData[CONFIG_OPT][YDEV_OPT]["group_name"]    = groupNameText.value;
-  configData[CONFIG_OPT][YDEV_OPT]["enable_syslog"] = syslogEnableCheckbox.checked;
-  let jsonStr = JSON.stringify(configData);
-  uo.debug("jsonStr="+jsonStr);
-
-  $.ajax({
-    url: '/rpc/config.set',
-    data: jsonStr,
-    type: 'POST',
-    success: function(data) {
-      uo.debug("Set config success");
-
-      //Now save the config to a file.
-      $.ajax({
-        url: '/RPC/Config.Save',
-        data: jsonStr,
-        type: 'POST',
+        url: '/rpc/get_config',
         success: function(data) {
-          uo.debug("Save config success");
-
-          //Now update the syslog state.
-          $.ajax({
-            url: '/rpc/ydev.update_syslog',
-            type: 'POST',
-            success: function(data) {
-              uo.debug("Update syslog success");
-            },
-          })
-
-        },
-      })
-    },
-  })
+            uo.debug("get_config:");
+            console.dir(data);
+            var unitName = data["unit_name"];
+            if (unitName) {
+                devNameField.value = unitName;
+                titleLabel.innerHTML  = unitName;
+            }
+            var enableSyslog = data["syslog_enabled"];
+            if( enableSyslog ) {
+                enableSyslogCB.checked = true;
+            }
+            else {
+                enableSyslogCB.checked = false;
+            }
+            var maxPowrPlotPoints = data["max_pp_count"];
+            if (maxPowrPlotPoints) {
+                maxPwrPlotPointsField.value = maxPowrPlotPoints;
+            }
+        }
+    });
 }
 
-/**
- * @brief Called when the factory defaults button is selected.
- **/
-function setDefaults() {
-  uo.debug("setDefaults()");
-  if( confirm("Are you sure that you wish to set the device configuration to factory defaults and reboot ?") ) {
-      $.ajax({
-      url: '/rpc/ydev.factorydefault',
-      type: 'POST',
-      success: function(data) {
-        uo.debug("Set factory default config success");
-        alert("The device is now rebooting.");
-        document.body.style.cursor = 'wait';
-        setTimeout( location.reload() , 1000);
-      },
-    })
-  }
-}
-
-/**
- * @brief Called when the Reboot button is selected.
- **/
-function reboot() {
-  uo.debug("reboot()");
-  if( confirm("Are you sure that you wish to reboot the device ?") ) {
-    $.ajax({
-      url: '/rpc/sys.reboot',
-      type: 'POST',
-      success: function(data) {
-        uo.debug("Reboot success");
-        alert("The device is now rebooting.");
-        document.body.style.cursor = 'wait';
-        setTimeout( location.reload() , 1000);
-      },
-    })
-  }
-}
 
 /**
  * @brief Called when a tab (in product.html) is selected.
@@ -330,39 +367,113 @@ function selectTab(evt, cityName) {
   var i, tabcontent, tablinks;
   tabcontent = document.getElementsByClassName("tabcontent");
   for (i = 0; i < tabcontent.length; i++) {
-  tabcontent[i].style.display = "none";
+  	tabcontent[i].style.display = "none";
   }
   tablinks = document.getElementsByClassName("tablinks");
   for (i = 0; i < tablinks.length; i++) {
-  tablinks[i].className = tablinks[i].className.replace(" active", "");
+  	tablinks[i].className = tablinks[i].className.replace(" active", "");
   }
   document.getElementById(cityName).style.display = "block";
   evt.currentTarget.className += " active";
 }
 
 /**
+ * @brief Called when the set amps button is is selected.
+ **/
+function setTargetAmps() {
+	uo.debug("setTargetAmps()");
+	//PJA TODO
+}
+
+/**
+ * @brief Called when the set watts button is is selected.
+ **/
+function setTargetWatts() {
+	uo.debug("setTargetWatts()");
+	//PJA TODO
+}
+
+/**
+ * @brief Called when the set set config button is selected.
+ **/
+function setConfig() {
+    uo.debug("setConfig()");
+
+    var  devName = devNameField.value;
+    var  groupName = devNameField.value;
+    var _enable_syslog=0;
+    if( enableSyslogCB.checked ) {
+        _enable_syslog=1;
+    }
+    if( maxPwrPlotPointsField.value < 10) {
+        alert("A minimum of 10 plot points must be set.");
+        return;
+    }
+    var maxPPCount = maxPwrPlotPointsField.value;
+    
+    var jsonStr = JSON.stringify({
+        dev_name: devName,
+        group_name: groupName,
+        enable_syslog:_enable_syslog,
+        max_pp_count: maxPPCount,
+   }, null, '\t');
+
+   $.ajax({
+        url: '/rpc/set_config',
+        data: jsonStr,
+        type: 'POST',
+        success: function(data) {
+        },
+    })
+    console.dir(jsonStr);
+
+    updateView(true);
+    updateView(true);
+
+}
+
+/**
+ * @brief Called when the set set config button is selected.
+ **/
+function setFactoryDefaults() {
+    uo.debug("setFactoryDefaults()");
+    //PJA TODO
+}
+
+
+/**
+ * @brief Called when the set set config button is selected.
+ **/
+function reboot() {
+    uo.debug("reboot()");
+}
+
+/**
+ * Called at intervals to update the table if required.
+ * 
+ * @returns null
+ */
+setInterval(function() {
+    updateView(false); 
+}, 1000);
+
+/**
  * @brief Called when the page is loaded.
  **/
 window.onload = function(e){
-  uo.debug("window.onload()");
-  updateView();
+  	uo.debug("window.onload()");
+	updateView(true);
+  
+   setAmpsButton.addEventListener("click", setTargetAmps);
+   setWattsButton.addEventListener("click", setTargetWatts);
 
-  setConfigButton.addEventListener("click", setDeviceConfig);
-  setDefaultsButton.addEventListener("click", setDefaults);
-  rebootButton.addEventListener("click", reboot);
-
-  opFreqNumber.addEventListener("click", setFreqAction);
-  opFreqNumber.addEventListener("keypress", setFreqActionEnter);
-
-  rfLevelM4.addEventListener("click", setLevelAction);
-  rfLevelM1.addEventListener("click", setLevelAction);
-  rfLevel2.addEventListener("click", setLevelAction);
-  rfLevel5.addEventListener("click", setLevelAction);
-
-  rfStateOn.addEventListener("click", setOnOffAction);
-  rfStateOff.addEventListener("click", setOnOffAction);
+   setConfigButton.addEventListener("click", setConfig);
+   factoryDefaultsButton.addEventListener("click", setFactoryDefaults);
+   rebootButton.addEventListener("click", reboot);
 
 }
 
 //Select the required tab when the product.html page is loaded.
 document.getElementById("defaultOpen").click();
+
+
