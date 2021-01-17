@@ -1,3 +1,4 @@
+const TEMP_PLOT_AREA_ID = "tempPlotArea";
 
 var devNameLabel         = document.getElementById("devNameLabel");
 var setAmpsButton        = document.getElementById("set_current");
@@ -6,6 +7,8 @@ var setWattsButton       = document.getElementById("set_watts");
 var setConfigButton = document.getElementById("setConfigButton");
 var factoryDefaultsButton = document.getElementById("setDefaultsButton");
 var rebootButton = document.getElementById("rebootButton");
+var targetAmpsField = document.getElementById("targetAmps");
+var targetWattsField = document.getElementById("targetWatts");
 
 var titleLabel = document.getElementById("titleLabel");
 var devNameField = document.getElementById("devNameText");
@@ -14,14 +17,6 @@ var enableSyslogCB = document.getElementById("syslogEnableCheckbox");
 var maxPwrPlotPointsField = document.getElementById("maxPwrPlotPoints");
 
 var maxPlotPointsIPF     = document.getElementById("maxPwrPlotPoints");
-var wattsDateTimeList    = [];
-var wattsList = [];
-
-var ampsDateTimeList    = [];
-var ampsList = [];
-
-var voltsDateTimeList    = [];
-var voltsList = [];
 
 const guageSize    = 250;
 
@@ -34,6 +29,11 @@ var ampsGauge = null;
 var maxVolts = 1;
 var voltsGauge = null;
 
+var maxTemp = 1;
+var tempGauge = null;
+
+var firstPlot = true;
+var maxPlotPoints=10;
 
 /**
  * @brief A UserOutput class responsible for displaying log messages
@@ -84,13 +84,11 @@ class UO {
 var uo = new UO(true);
 
 /**
- * @brief Add to a time series plot
- * @param yValue The value list.
- * @param yValueList A list Y range values on a plot.
- * @param
+ * @brief Get the time now in a string that can be used as the X 
+ * axis by plotly.
  * @returns
  */
-function addToTimeSeries(yValue, xValueTimeList, yValueList) {
+function getTimeNow() {
     var now = new Date();
     var hours = now.getHours();
     var minutes = now.getMinutes();
@@ -98,27 +96,19 @@ function addToTimeSeries(yValue, xValueTimeList, yValueList) {
     var tenthSeconds = now.getMilliseconds() / 100;
     var formattedDateTime = "" + hours.toString().padStart(2, "0") + ":"
             + minutes.toString().padStart(2, "0") + ":" + seconds;
-
-    xValueTimeList.push(formattedDateTime);
-    yValueList.push(yValue);
+    return formattedDateTime;
 }
 
 /**
- * @brief Limit the maximum number of plot points.
- * @param xValueList A list of x Value on a plot.
- * @param yValueList A list of y Value on a plot.
- * @returns
+ * @brief Returns a random integer between min (inclusive) and max (inclusive). The
+ * value is no lower than min (or the next integer greater than min if min isn't
+ * an integer) and no greater than max (or the next integer lower than max if
+ * max isn't an integer).
  */
-function limitMaxPlotPoint(xValueList, yValueList) {
-    var maxPlotPoints = parseInt(maxPlotPointsIPF.value);
-    // Limit the plot size so it does not slow down the browser.
-    if (xValueList.length > maxPlotPoints) {
-        // Randomly remove an element from the list leaving the first
-        // to preserve the length of the plot.
-        indexToDel = getRandomInt(1, maxPlotPoints);
-        xValueList.splice(indexToDel, 1);
-        yValueList.splice(indexToDel, 1);
-    }
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 /**
@@ -164,37 +154,13 @@ function getTimePlotLayout(yAxisLabel) {
 }
 
 /**
- * @brief Plot data on a plot
- * @param plotCanvasName The name of the plot canvas in the html file.
- * @param traceList A list of traces to plot.
- * @param layout The layout to use to plot.
- * @returns 
+ * @brief Create the watts plot
  */
-function plot(plotCanvasName, traceList, layout) {
-    // As Plotly is to big to fit in the devices flash it is downloaded direct
-    // and therefore may not be found so wrap in a try/catch block so the
-    // javascript runs if Plotly is not available.
-    try {
-        Plotly.newPlot(plotCanvasName, traceList, layout, {
-            responsive : true
-        });
-    } catch (err) {
-    }
-}
-
-/**
- * @brief Plot watts
- * @param watts The DC load in watts.
- */
-function plotWatts(watts) {
+function createWattsPlot() {
 
     var layout = getTimePlotLayout("Watts");
 
-    limitMaxPlotPoint(wattsDateTimeList, wattsList);
-    
-    addToTimeSeries(watts, wattsDateTimeList, wattsList);
-
-    var trace = getTrace("Power", wattsDateTimeList, wattsList);
+    var trace = getTrace("Power", [], []);
 
     plot('wattsPlotArea', [ trace ], layout);
 
@@ -202,18 +168,13 @@ function plotWatts(watts) {
 }
 
 /**
- * @brief Plot amps
- * @param amps The DC load in amps.
+ * @brief Create the amps plot
  */
-function plotAmps(amps) {
+function createAmpsPlot() {
 
     var layout = getTimePlotLayout("Amps");
 
-    limitMaxPlotPoint(ampsDateTimeList, ampsList);
-    
-    addToTimeSeries(amps, ampsDateTimeList, ampsList);
-
-    var trace = getTrace("Current", ampsDateTimeList, ampsList);
+    var trace = getTrace("Current", [], []);
 
     plot('ampsPlotArea', [ trace ], layout);
 
@@ -221,24 +182,42 @@ function plotAmps(amps) {
 }
 
 /**
- * @brief Plot vols
- * @param volts The DC voltage in volts.
+ * @brief Create the volts plot
  */
-function plotVolts(volts) {
+function createVoltsPlot() {
 
     var layout = getTimePlotLayout("Volts");
 
-    limitMaxPlotPoint(voltsDateTimeList, voltsList);
-    
-    addToTimeSeries(volts, voltsDateTimeList, voltsList);
-
-    var trace = getTrace("Voltage", voltsDateTimeList, voltsList);
+    var trace = getTrace("Voltage", [], []);
 
     plot('voltsPlotArea', [ trace ], layout);
 
     return trace;
 }
 
+/**
+ * @brief Create the temp C plot
+ */
+function createTempCPlot() {
+
+    var layout = getTimePlotLayout("C");
+
+    var trace = getTrace("Temperature", [], []);
+
+    plot(TEMP_PLOT_AREA_ID, [ trace ], layout);
+
+    return trace;
+}
+/**
+ * @param Add a value to the to a pre existing plot
+ * @param plotIDTag The HTML ID tag of the plot canvas.
+ * @param xAxisTime The time to record the temp value.
+ * @param value The value on the Y axis to be plotted.
+ * @returns
+ */
+function addPlotValue(plotIDTag, xAxisTime, value) {
+    Plotly.extendTraces(plotIDTag, {y: [[value]], x: [[xAxisTime]]}, [0], maxPlotPoints)
+}
 
 /**
  * @brief Get a radial guage instantiation.
@@ -309,6 +288,15 @@ function createVoltsGauge() {
     voltsGauge.draw();
 }
 
+/**
+ * @brief Init the temp gauge guage.
+ * @returns A RadialGuage object for measuring temp in C.
+ */
+function createTempGauge() {
+    tempGauge = getRadialGauge('temp-gauge-canvas',guageSize, 'Temperature',"C", maxTemp, 7, 1 );
+    tempGauge.draw();
+}
+
 
 /**
  * @brief Update the view of the device.
@@ -320,29 +308,29 @@ function updateView(updateConfig) {
       if( updateConfig ) {
           getConfig();
       }
-
-      //PJA REMOVE
-      plotWatts(0);
-      plotAmps(0);
-      plotVolts(0);
       
-      createWattsGauge();
-      createAmpsGauge();
-      createVoltsGauge();
+      getStats();
+
 }
 
+/**
+ * @brief Get the config params from the device.
+ * @returns 
+ */
 function getConfig() {
-    uo.debug("getStatus()");
+    uo.debug("getConfig()");
     $.ajax({
         url: '/rpc/get_config',
         success: function(data) {
-            uo.debug("get_config:");
+            uo.debug("got config");
             console.dir(data);
+
             var unitName = data["unit_name"];
             if (unitName) {
                 devNameField.value = unitName;
                 titleLabel.innerHTML  = unitName;
             }
+            
             var enableSyslog = data["syslog_enabled"];
             if( enableSyslog ) {
                 enableSyslogCB.checked = true;
@@ -350,14 +338,110 @@ function getConfig() {
             else {
                 enableSyslogCB.checked = false;
             }
-            var maxPowrPlotPoints = data["max_pp_count"];
-            if (maxPowrPlotPoints) {
-                maxPwrPlotPointsField.value = maxPowrPlotPoints;
+            
+            maxPlotPoints = data["max_pp_count"];
+            if (maxPlotPoints) {
+                maxPwrPlotPointsField.value = maxPlotPoints;
             }
+            
+            var targetAmps = data["target_amps"];
+            targetAmpsField.value = targetAmps;
+            
+            var targetWatts = data["target_watts"];
+            targetWattsField.value = targetWatts;
+
         }
     });
 }
 
+/**
+ * @brief Get the stats (amps, volts etc) from the device.
+ * @returns 
+ */
+function getStats() {
+    uo.debug("getStats()");
+    
+    $.ajax({
+        url: '/rpc/get_stats',
+        success: function(data) {
+            uo.debug("got stats");
+            console.dir(data);
+            formattedDateTime = getTimeNow();
+            var amps = data["amps"];
+/*
+            if( firstPlot ) {
+                createAmpsPlot();
+            }
+            addPlotValue('ampsPlotArea', formattedDateTime, amps);
+*/
+            if( firstPlot || maxAmps < amps ) {
+                maxAmps = amps+1;
+                createAmpsGauge();
+            }
+            ampsGauge.value=amps;
+
+            var watts = data["watts"];
+/*
+            if( firstPlot ) {
+                createWattsPlot();
+            }
+            addPlotValue('wattsPlotArea', formattedDateTime, watts);
+*/
+            if( firstPlot || maxWatts < watts ) {
+                maxWatts = watts+5;
+                createWattsGauge();
+            }
+            wattsGauge.value=watts;
+
+            var volts = data["volts"];
+            /*
+            if( firstPlot ) {
+                createVoltsPlot();
+            }
+            addPlotValue('voltsPlotArea', formattedDateTime, volts);
+*/
+            if( firstPlot  || maxVolts < volts ) {
+                maxVolts = volts+5;
+                createVoltsGauge();
+            }
+            voltsGauge.value=volts;
+
+            var tempC = data["temp_c"];
+/*
+            if( firstPlot ) {
+                createTempCPlot();
+            }
+            addPlotValue(TEMP_PLOT_AREA_ID, formattedDateTime, tempC);
+*/
+            if( firstPlot || maxTemp < tempC ) {
+                maxTemp = tempC+5;
+                createTempGauge();
+            }
+            tempGauge.value=tempC;
+            
+            firstPlot = false;
+        }
+    });
+}
+
+/**
+ * @brief Plot data on a plot
+ * @param plotCanvasName The name of the plot canvas in the html file.
+ * @param traceList A list of traces to plot.
+ * @param layout The layout to use to plot.
+ * @returns 
+ */
+function plot(plotCanvasName, traceList, layout) {
+    // As Plotly is to big to fit in the devices flash it is downloaded direct
+    // and therefore may not be found so wrap in a try/catch block so the
+    // javascript runs if Plotly is not available.
+    try {
+        Plotly.newPlot(plotCanvasName, traceList, layout, {
+            responsive : true
+        });
+    } catch (err) {
+    }
+}
 
 /**
  * @brief Called when a tab (in product.html) is selected.
@@ -437,15 +521,37 @@ function setConfig() {
  **/
 function setFactoryDefaults() {
     uo.debug("setFactoryDefaults()");
-    //PJA TODO
+    if( confirm("Are you sure that you wish to set the device configuration to factory defaults and reboot ?") ) {
+        $.ajax({
+        url: '/rpc/factorydefault',
+        type: 'POST',
+        success: function(data) {
+          uo.debug("Set factory default config success");
+          alert("The device is now rebooting.");
+          document.body.style.cursor = 'wait';
+          setTimeout( location.reload() , 1000);
+        },
+      })
+    }
 }
-
 
 /**
  * @brief Called when the set set config button is selected.
  **/
 function reboot() {
     uo.debug("reboot()");
+    if( confirm("Are you sure that you wish to reboot the device ?") ) {
+        $.ajax({
+          url: '/rpc/reboot',
+          type: 'POST',
+          success: function(data) {
+            uo.debug("Reboot success");
+            alert("The device is now rebooting.");
+            document.body.style.cursor = 'wait';
+            setTimeout( location.reload() , 1000);
+          },
+        })
+    }
 }
 
 /**

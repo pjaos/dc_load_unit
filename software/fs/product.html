@@ -16,7 +16,7 @@
   <div class="tab">
     <button class="tablinks" id="defaultOpen" onclick="selectTab(event, 'Tab1')">Control</button>
     <button class="tablinks" onclick="selectTab(event, 'Tab2')">Plots</button>
-    <button class="tablinks" onclick="selectTab(event, 'Tab3')">Gauges</button>
+    <button class="tablinks" onclick="selectTab(event, 'Tab3')">Dials</button>
     <button class="tablinks" onclick="selectTab(event, 'Tab4')">Configuration</button>
   </div>
 
@@ -25,7 +25,7 @@
       <TABLE BORDER="0" cellpadding="10">
         <tr>
           <TD>Current (Amps):</TD>
-          <TD><input id="ampsNumber" class="btn btn-sm btn-a" type="number" step="0.1" SIZE="30" title="The required current in Amps."></TD>
+          <TD><input id="targetAmps" class="btn btn-sm btn-a" type="number" step="0.1" SIZE="10" title="The required current in Amps."></TD>
           <TD>
 			 <div class="form-control">
 				<button href="#" class="btn btn-sm btn-b" id="set_current">Set</button>
@@ -34,7 +34,7 @@
         </tr>
         <tr>
           <TD>Watts (Watts):</TD>
-          <TD><input id="wattsNumber" class="btn btn-sm btn-a" type="number" step="5" SIZE="30" title="The required power in watts."></TD>
+          <TD><input id="targetWatts" class="btn btn-sm btn-a" type="number" step="5" SIZE="10" title="The required power in watts."></TD>
           <TD>
 			 <div class="form-control">
 				<button href="#" class="btn btn-sm btn-b" id="set_watts">Set</button>
@@ -55,6 +55,7 @@
        <tr><div id="wattsPlotArea"></div></tr>
        <tr> <div id="ampsPlotArea"></div></tr>
        <tr> <div id="voltsPlotArea"></div></tr>
+       <tr> <div id="tempPlotArea"></div></tr>
       </TABLE>
      </fieldset>
     </div>
@@ -77,6 +78,11 @@
        <tr>
         <fieldset class="col c1" id="watts-fieldset">
           <canvas id="volts-gauge-canvas"></canvas>
+        </fieldset>
+       </tr>
+       <tr>
+        <fieldset class="col c1" id="temp-fieldset">
+          <canvas id="temp-gauge-canvas"></canvas>
         </fieldset>
        </tr>
       </TABLE>
@@ -107,7 +113,7 @@
 		<tr>
 		  <TD>Max power plot points</TD>
 		  <TD><input id="maxPwrPlotPoints" type="number"
-		         title="The maximum number of power plot points. Values greater than 10000 may slow your browser."></TD>
+		         title="The maximum number of power plot points. Values greater than 500 may slow your browser."></TD>
 		 </tr>
                         
       </TABLE>

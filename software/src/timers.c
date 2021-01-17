@@ -36,10 +36,16 @@
 
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
-//Note The target value can either be the required amps or the required power, not both
+//Note The target value can either be the required amps or the required power, not both.
+//     If target_watts is set then the target amps is set using the current voltage.
 float target_amps = 0.0;
 float target_watts = 0.0;
 bool  temp_alarm = false;
+float temp_now = 0.0;
+float amps_now = 0.0;
+float volts_now = 0.0;
+float watts_now = 0.0;
+
 
 /**
  * @brief Callback to send periodic updates of the memory and file system state.
@@ -141,16 +147,11 @@ static float get_current(uint8_t off) {
 }
 
 /**
- * @brief Reset a temperature alarm.
+ * @brief Get the temp value.
+ * @return temp in C
  */
-void reset_temp_alarm(void) {
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "reset_temp_alarm():" );
-    log_msg(LL_INFO, syslog_msg_buf);
-
-    if( temp_alarm ) {
-        temp_alarm = false;
-        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "reset_temp_alarm() TEMP ALARM HAS BEEN RESET" );
-    }
+float get_temp_alarm(void) {
+    return temp_alarm;
 }
 
 /***
@@ -172,8 +173,22 @@ static void temp_cb(void *arg) {
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! MAX TEMP REACHED (%.1f/%.1f C). TURNED OFF LOAD !!!", temp, MAX_HEATSINK_TEMP );
         log_msg(LL_INFO, syslog_msg_buf);
     }
+    else {
+        temp_alarm = false;
+    }
+
+    temp_now = temp;
 
 }
+
+/**
+ * @brief Get the temp value.
+ * @return temp in C
+ */
+float get_temp_C(void) {
+    return temp_now;
+}
+
 
 /***
  * @brief Called periodically to read the voltage and current values.
@@ -181,30 +196,59 @@ static void temp_cb(void *arg) {
  */
 static void pid_loop_cb(void *arg) {
     int64_t start_t = mgos_uptime_micros();
-    float voltage = get_voltage();
+    float volts = get_voltage();
     uint8_t load_off = 0;
 
     int64_t v_read_t = mgos_uptime_micros();
-    //If we have no voltage the load must be off
-    if( voltage == 0 ) {
+    //If we have no volts the load must be off
+    if( volts == 0 ) {
         load_off=1;
     }
 
     float amps = get_current(load_off);
-    float watts = amps * voltage;
+    float watts = amps * volts;
     int64_t a_read_t = mgos_uptime_micros();
 
     //if the user has requested watts
     if( target_watts > 0 ) {
-        target_amps = target_watts / voltage;
+        target_amps = target_watts / volts;
     }
 
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "watts=%.3f, Took %d us to read the voltage, took %d us to read the current. Total %d us.", watts, (int)(v_read_t-start_t), (int)(a_read_t-v_read_t), (int)(a_read_t-start_t) );
     log_msg(LL_INFO, syslog_msg_buf);
 
+    amps_now = amps;
+    volts_now = volts;
+    watts_now = watts;
+
     (void) arg;
 }
 
+/**
+ * @brief Get the amps value.
+ * @return amps
+ */
+float get_amps(void) {
+    return amps_now;
+}
+
+
+/**
+ * @brief Get the volts value.
+ * @return volts
+ */
+float get_volts(void) {
+    return volts_now;
+}
+
+
+/**
+ * @brief Get the watts value.
+ * @return watts
+ */
+float get_watts(void) {
+    return watts_now;
+}
 
 /**
  * @brief Set the load value.
@@ -228,11 +272,27 @@ void set_target_amps(float amps) {
 }
 
 /**
+ * @brief Get the target amps value.
+ * @return the target amps.
+ */
+float get_target_amps(void) {
+    return target_amps;
+}
+
+/**
  * @brief Set the target watts value.
  * @return void
  */
 void set_target_watts(float watts) {
     target_watts = watts;
+}
+
+/**
+ * @brief Get the target watts value.
+ * @return the target watts.
+ */
+float get_target_watts(void) {
+    return target_watts;
 }
 
 /***

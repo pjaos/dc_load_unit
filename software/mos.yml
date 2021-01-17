@@ -39,7 +39,7 @@ config_schema:
  - ["ydev.unit_name",     "s", "DC_LOAD",  {title: "The name for the device."}]
  - ["ydev.group_name",    "s", "",         {title: "The yView group name."}]
  - ["ydev.enable_syslog", "b", false,      {title: "Enable syslogging."}]
- - ["ydev.max_pp_count",  "d", 1000,       {title: "The max number of plot point to be displayed."}]
+ - ["ydev.max_pp_count",  "d", 100,       {title: "The max number of plot point to be displayed."}]
 
 libs:
  - origin: https://github.com/mongoose-os-libs/boards

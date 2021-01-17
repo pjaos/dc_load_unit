@@ -150,25 +150,12 @@ static void mgos_rpc_ydev_set_watts(struct mg_rpc_request_info *ri,
 }
 
 /*
- * @brief Callback handler to set set the target watts value.
+ * @brief Callback handler to set set the debug level.
  * @param ri
  * @param cb_arg
  * @param fi
  * @param args
  */
-static void reset_temp_alarm_cb(struct mg_rpc_request_info *ri,
-                                         void *cb_arg,
-                                         struct mg_rpc_frame_info *fi,
-                                         struct mg_str args) {
-    reset_temp_alarm();
-    mg_rpc_send_responsef(ri, "");
-
-    (void) ri;
-    (void) cb_arg;
-    (void) fi;
-    (void) args;
-}
-
 static void mgos_sys_set_debug_handler(struct mg_rpc_request_info *ri,
                                        void *cb_arg,
                                        struct mg_rpc_frame_info *fi,
@@ -223,13 +210,18 @@ static void mgos_rpc_get_config(struct mg_rpc_request_info *ri,
                               "unit_name:%Q,"
                               "group_name:%Q,"
                               "syslog_enabled:%d,"
-                              "max_pp_count:%d"
+                              "max_pp_count:%d,"
+                              "target_amps:%.001f,"
+                              "target_watts:%.1f"
                               "}"
                               ,
                               unit_name,
                               group_name,
                               syslog_enabled,
-                              max_pp_count);
+                              max_pp_count,
+                              get_target_amps(),
+                              get_target_watts()
+                              );
 
     (void) cb_arg;
     (void) fi;
@@ -301,6 +293,43 @@ static void mgos_rpc_set_config(struct mg_rpc_request_info *ri,
 }
 
 /*
+ * @brief Callback handler to get the stats from the device.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+    float tempC = get_temp_C();
+    float amps = get_amps();
+    float volts = get_volts();
+    float watts = get_watts();
+    int temp_alarm = get_temp_alarm();
+
+    mg_rpc_send_responsef(ri, "{"
+                              "amps:%.001f,"
+                              "volts:%.1f,"
+                              "watts:%.1f,"
+                              "temp_c:%.1f,"
+                              "temp_alarm:%d"
+                              "}"
+                              ,
+                              amps,
+                              volts,
+                              watts,
+                              tempC,
+                              temp_alarm
+                              );
+
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
  * @brief Init all the RPC handlers.
  */
 void rpc_init(void) {
@@ -311,12 +340,12 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "update_syslog", NULL, mgos_rpc_ydev_update_syslog, NULL);
 
         mg_rpc_add_handler(con, "get_config", NULL, mgos_rpc_get_config, NULL);
+        mg_rpc_add_handler(con, "get_stats", NULL, mgos_rpc_get_stats, NULL);
         mg_rpc_add_handler(con, "set_config", SET_CONFIG_RPC_JSON_STRING, mgos_rpc_set_config, NULL);
 
         mg_rpc_add_handler(con, "pwm", "{pwm: %f}", mgos_rpc_ydev_set_pwm, NULL);
         mg_rpc_add_handler(con, "target_amps", "{amps: %f}", mgos_rpc_ydev_set_amps, NULL);
         mg_rpc_add_handler(con, "target_power", "{watts: %f}", mgos_rpc_ydev_set_watts, NULL);
-        mg_rpc_add_handler(con, "reset_temp_alarm", NULL, reset_temp_alarm_cb, NULL);
         mg_rpc_add_handler(con, "debug", "{level: %d}", mgos_sys_set_debug_handler, NULL);
 
 }
