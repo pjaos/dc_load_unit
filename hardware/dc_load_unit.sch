@@ -50,8 +50,8 @@ $Comp
 L pja_1:IRFP250N Q6
 U 1 1 5F9E299D
 P 8900 5800
-F 0 "Q6" H 9150 5842 45  0000 L CNN
-F 1 "IRFP250N" H 9150 5758 45  0000 L CNN
+F 0 "Q6" H 9100 6000 45  0000 L CNN
+F 1 "IRFP250N" H 9150 5900 45  0000 L CNN
 F 2 "Package_TO_SOT_THT:TO-247-3_Vertical" H 8930 5950 20  0001 C CNN
 F 3 "" H 8900 5800 60  0001 C CNN
 	1    8900 5800
@@ -316,12 +316,12 @@ $EndComp
 $Comp
 L Device:R R15
 U 1 1 5FA75329
-P 9950 3550
-F 0 "R15" V 9743 3550 50  0000 C CNN
-F 1 "470R" V 9834 3550 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 9880 3550 50  0001 C CNN
-F 3 "~" H 9950 3550 50  0001 C CNN
-	1    9950 3550
+P 9900 3200
+F 0 "R15" V 9693 3200 50  0000 C CNN
+F 1 "470R" V 9784 3200 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 9830 3200 50  0001 C CNN
+F 3 "~" H 9900 3200 50  0001 C CNN
+	1    9900 3200
 	0    1    1    0   
 $EndComp
 Wire Wire Line
@@ -1032,17 +1032,6 @@ Wire Wire Line
 Connection ~ 8900 5400
 Wire Wire Line
 	8900 5400 9850 5400
-$Comp
-L pja_1:IRFP250N Q4
-U 1 1 600F2C51
-P 7850 5800
-F 0 "Q4" H 8100 5842 45  0000 L CNN
-F 1 "IRFP250N" H 8100 5758 45  0000 L CNN
-F 2 "Package_TO_SOT_THT:TO-247-3_Vertical" H 7880 5950 20  0001 C CNN
-F 3 "" H 7850 5800 60  0001 C CNN
-	1    7850 5800
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	7850 6200 8900 6200
 Wire Wire Line
@@ -1354,16 +1343,16 @@ Wire Wire Line
 	9700 2250 9900 2250
 Text Label 9550 5400 0    50   ~ 0
 FET+
-Text Label 9600 6200 0    50   ~ 0
+Text Label 9950 6200 0    50   ~ 0
 FET-
-Text Label 7350 5900 0    50   ~ 0
-FETG
+Text Label 7450 5900 2    50   ~ 0
+FET1G
 Text GLabel 10300 4350 0    50   Input ~ 0
 V+
 Text GLabel 9850 4350 0    50   Input ~ 0
 IP+
 Text Notes -50  -250 0    50   ~ 0
-Bringup Notes\n\n- Footprint of U1 is not quite the right size but fits\n- Fan connectors screen print is wrong way round\n- MOSFET OSC when under load, Added 10 uf 25v cap on MOSFET gate\n- Added 2.2 uh capacitors to MOSFET gates to stop parasitic OSC\n\nIf an updated board is built then these inductors should be added.\nAlso C16 should be added.\n\n- It may also be useful to add an alarm sounder device to one of the spare GPIO pins.
+Bringup Notes\n\n- Footprint of U1 is not quite the right size but fits\n- Fan connectors screen print is wrong way round\n- Added 2.2 uh inductors to MOSFET gates to stop parasitic OSC\n- Added 470nf cap accross R15.\n\nIf an updated board is built then these inductors should be added.\nAlso C16 should be added.\n\n- It may also be useful to add an alarm sounder device to one of the spare GPIO pins.
 Text GLabel 5250 3350 0    50   Input ~ 0
 F4
 Wire Wire Line
@@ -1697,21 +1686,9 @@ Wire Wire Line
 Connection ~ 3800 7150
 Connection ~ 4600 7150
 Wire Wire Line
-	10200 3100 10200 3550
-Wire Wire Line
-	10100 3550 10200 3550
-Connection ~ 10200 3550
-Wire Wire Line
-	10200 3550 10200 3700
-Wire Wire Line
 	9300 3550 9600 3550
 Wire Wire Line
 	9700 3200 9750 3200
-Wire Wire Line
-	9750 3200 9750 3550
-Connection ~ 9750 3550
-Wire Wire Line
-	9750 3550 9800 3550
 Connection ~ 1950 1600
 Wire Wire Line
 	1950 1600 1600 1600
@@ -2024,8 +2001,8 @@ $Comp
 L Device:D_Zener D11
 U 1 1 5FF0DA4A
 P 9900 3700
-F 0 "D11" V 9854 3779 50  0000 L CNN
-F 1 "3V" V 9945 3779 50  0000 L CNN
+F 0 "D11" H 9750 3800 50  0000 L CNN
+F 1 "3V" H 9950 3800 50  0000 L CNN
 F 2 "Diode_SMD:D_MicroMELF_Hadsoldering" H 9900 3700 50  0001 C CNN
 F 3 "~" H 9900 3700 50  0001 C CNN
 	1    9900 3700
@@ -2190,26 +2167,6 @@ F 3 "~" H 1100 5850 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Device:C C16
-U 1 1 60018A75
-P 6800 6800
-F 0 "C16" H 6650 6900 50  0000 L CNN
-F 1 "DNF" H 6600 7000 50  0000 L CNN
-F 2 "Capacitor_Tantalum_SMD:CP_EIA-6032-20_AVX-F_Pad2.25x2.35mm_HandSolder" H 6838 6650 50  0001 C CNN
-F 3 "~" H 6800 6800 50  0001 C CNN
-	1    6800 6800
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	6800 6950 6800 7150
-Wire Wire Line
-	6800 7150 6450 7150
-Connection ~ 6450 7150
-Wire Wire Line
-	6800 6650 6800 6450
-Wire Wire Line
-	6800 6450 7150 6450
-$Comp
 L pspice:INDUCTOR L1
 U 1 1 60070B68
 P 7450 6200
@@ -2243,8 +2200,6 @@ F 3 "~" H 9450 6200 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	7150 6000 7150 6450
-Wire Wire Line
 	7450 5900 7450 5950
 Wire Wire Line
 	8500 5900 8500 5950
@@ -2258,5 +2213,61 @@ Connection ~ 8500 6450
 Wire Wire Line
 	7450 6450 7150 6450
 Connection ~ 7450 6450
-Connection ~ 7150 6450
+Wire Wire Line
+	10200 3100 10200 3200
+Wire Wire Line
+	9750 3200 9750 3550
+Connection ~ 9750 3200
+Wire Wire Line
+	10050 3200 10200 3200
+Connection ~ 10200 3200
+Wire Wire Line
+	10200 3200 10200 3550
+$Comp
+L Device:C C17
+U 1 1 60125535
+P 9900 3550
+F 0 "C17" V 9648 3550 50  0000 C CNN
+F 1 "470nf" V 9739 3550 50  0000 C CNN
+F 2 "" H 9938 3400 50  0001 C CNN
+F 3 "~" H 9900 3550 50  0001 C CNN
+	1    9900 3550
+	0    1    1    0   
+$EndComp
+Connection ~ 9750 3550
+Wire Wire Line
+	10050 3550 10200 3550
+Connection ~ 10200 3550
+Wire Wire Line
+	10200 3550 10200 3700
+$Comp
+L pja_1:IRFP250N Q4
+U 1 1 600F2C51
+P 7850 5800
+F 0 "Q4" H 8000 6050 45  0000 L CNN
+F 1 "IRFP250N" H 8050 5950 45  0000 L CNN
+F 2 "Package_TO_SOT_THT:TO-247-3_Vertical" H 7880 5950 20  0001 C CNN
+F 3 "" H 7850 5800 60  0001 C CNN
+	1    7850 5800
+	1    0    0    -1  
+$EndComp
+Text Label 8500 5900 2    50   ~ 0
+FET2G
+Text Label 9450 5900 2    50   ~ 0
+FET3G
+$Comp
+L Device:R R37
+U 1 1 601E5BBF
+P 7150 6250
+F 0 "R37" H 7220 6296 50  0000 L CNN
+F 1 "4k7" H 7220 6205 50  0000 L CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 7080 6250 50  0001 C CNN
+F 3 "~" H 7150 6250 50  0001 C CNN
+	1    7150 6250
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7150 6400 7150 6450
+Wire Wire Line
+	7150 6100 7150 6000
 $EndSCHEMATC
