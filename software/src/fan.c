@@ -10,12 +10,15 @@
 #define FAN4_GPIO 33
 #define FAN5_GPIO 32
 
-#define FAN1_THRESHOLD_TEMP 60
-#define FAN2_THRESHOLD_TEMP 40
-#define FAN3_THRESHOLD_TEMP 30
-#define FAN4_THRESHOLD_TEMP 35
-#define FAN5_THRESHOLD_TEMP 50
+#define FAN1_THRESHOLD_TEMP 65
+#define FAN2_THRESHOLD_TEMP 55
+#define FAN3_THRESHOLD_TEMP 45
+#define FAN4_THRESHOLD_TEMP 50
+#define FAN5_THRESHOLD_TEMP 60
 #define FAN_TEMP_HYSTERESIS  1
+
+
+enum fan_id_list{FAN1=1, FAN2, FAN3, FAN4, FAN5};
 
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
@@ -51,7 +54,7 @@ void set_fan_state(uint8_t fan_id, bool on) {
  * @param temp The heat sink temperature.
  * @return void.
  */
-void update_fan_state(uint8_t fan_id, float temp) {
+static void update_fan_state(uint8_t fan_id, float temp) {
     float threshold_temp = 0.0;
 
     if( fan_id == FAN1 ) {
@@ -78,6 +81,13 @@ void update_fan_state(uint8_t fan_id, float temp) {
     //Turn fan off if required
     if( temp <= threshold_temp-FAN_TEMP_HYSTERESIS ) {
         set_fan_state(fan_id, false);
+    }
+}
+
+void set_cooling(float temp) {
+    int fanID;
+    for( fanID = FAN1 ; fanID <= FAN5 ; fanID++ ) {
+        update_fan_state(fanID, temp);
     }
 }
 
