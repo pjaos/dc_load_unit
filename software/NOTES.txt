@@ -1,3 +1,8 @@
+TO DO
+- Add fan status on/off
+- Add control via PID loop
+- Add RPC's to set calibration values for amps and volts
+
 # Debug load
 netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
 
