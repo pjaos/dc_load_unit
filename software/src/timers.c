@@ -34,6 +34,9 @@
 
 #define MAX_HEATSINK_TEMP 79.0
 
+#define OFF_LOAD_FACTOR 0.15 //The PWM value at which the load is off
+#define OFF_VOLTAGE 0.05     //If the voltage is lower than this the load is considered off
+
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
 //Note The target value can either be the required amps or the required power, not both.
@@ -45,6 +48,7 @@ float temp_now = 0.0;
 float amps_now = 0.0;
 float volts_now = 0.0;
 float watts_now = 0.0;
+float load_factor= 0.0;
 
 
 /**
@@ -161,11 +165,7 @@ static void temp_cb(void *arg) {
     float temp = get_temp();
 
     //Set the fans on/off as required
-    update_fan_state(FAN1, temp);
-    update_fan_state(FAN2, temp);
-    update_fan_state(FAN3, temp);
-    update_fan_state(FAN4, temp);
-    update_fan_state(FAN5, temp);
+    set_cooling(temp);
 
     if( temp >= MAX_HEATSINK_TEMP ) {
         set_load(0.0);
@@ -175,6 +175,8 @@ static void temp_cb(void *arg) {
     }
     else {
         temp_alarm = false;
+        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Cooling down (%.1f/%.1f C).", temp, MAX_HEATSINK_TEMP );
+        log_msg(LL_INFO, syslog_msg_buf);
     }
 
     temp_now = temp;
@@ -200,8 +202,9 @@ static void pid_loop_cb(void *arg) {
     uint8_t load_off = 0;
 
     int64_t v_read_t = mgos_uptime_micros();
-    //If we have no volts the load must be off
-    if( volts == 0 ) {
+    //If we have no volts the load must be off or
+    //if the PWM setting is set to a value which turns the load off
+    if( volts < OFF_VOLTAGE || load_factor < OFF_LOAD_FACTOR ) {
         load_off=1;
     }
 
@@ -256,6 +259,7 @@ float get_watts(void) {
  * @return void
  */
 void set_load(float factor) {
+    load_factor = factor;
     mgos_pwm_set(PWM_PIN, PWM_FREQ, factor);
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "PWM LOAD VALUE: %.3f", factor);
     log_msg(LL_INFO, syslog_msg_buf);
