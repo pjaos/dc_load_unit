@@ -266,8 +266,12 @@ function getRadialGauge(renderCanvas, guageSize, title, units, maxValue, majorTi
  * @returns A RadialGuage object for measuring watts.
  */
 function createWattsGauge() {
+    var oldRef = wattsGauge;
     wattsGauge = getRadialGauge('watts-gauge-canvas',guageSize, 'Power',"Watts", maxWatts, 7, 1 );
     wattsGauge.draw();
+    if( oldRef != null ) {
+        document.removeChild(oldRef)
+    }
 }
 
 /**
@@ -275,8 +279,12 @@ function createWattsGauge() {
  * @returns A RadialGuage object for measuring amps.
  */
 function createAmpsGauge() {
+    var oldRef = ampsGauge;
     ampsGauge = getRadialGauge('amps-gauge-canvas',guageSize, 'Current',"Amps", maxAmps, 7, 1 );
     ampsGauge.draw();
+    if( oldRef != null ) {
+        document.removeChild(oldRef)
+    }
 }
 
 /**
@@ -284,8 +292,12 @@ function createAmpsGauge() {
  * @returns A RadialGuage object for measuring volts.
  */
 function createVoltsGauge() {
+    var oldRef = voltsGauge;
     voltsGauge = getRadialGauge('volts-gauge-canvas',guageSize, 'Voltage',"Volts", maxVolts, 7, 1 );
     voltsGauge.draw();
+    if( oldRef != null ) {
+        document.removeChild(oldRef)
+    }
 }
 
 /**
@@ -293,8 +305,12 @@ function createVoltsGauge() {
  * @returns A RadialGuage object for measuring temp in C.
  */
 function createTempGauge() {
+    var oldRef = tempGauge;
     tempGauge = getRadialGauge('temp-gauge-canvas',guageSize, 'Temperature',"C", maxTemp, 7, 1 );
     tempGauge.draw();
+    if( oldRef != null ) {
+        document.removeChild(oldRef)
+    }
 }
 
 
@@ -368,12 +384,12 @@ function getStats() {
             console.dir(data);
             formattedDateTime = getTimeNow();
             var amps = data["amps"];
-/*
+
             if( firstPlot ) {
                 createAmpsPlot();
             }
             addPlotValue('ampsPlotArea', formattedDateTime, amps);
-*/
+
             if( firstPlot || maxAmps < amps ) {
                 maxAmps = amps+1;
                 createAmpsGauge();
@@ -381,12 +397,12 @@ function getStats() {
             ampsGauge.value=amps;
 
             var watts = data["watts"];
-/*
+
             if( firstPlot ) {
                 createWattsPlot();
             }
             addPlotValue('wattsPlotArea', formattedDateTime, watts);
-*/
+
             if( firstPlot || maxWatts < watts ) {
                 maxWatts = watts+5;
                 createWattsGauge();
@@ -394,12 +410,12 @@ function getStats() {
             wattsGauge.value=watts;
 
             var volts = data["volts"];
-            /*
+
             if( firstPlot ) {
                 createVoltsPlot();
             }
             addPlotValue('voltsPlotArea', formattedDateTime, volts);
-*/
+
             if( firstPlot  || maxVolts < volts ) {
                 maxVolts = volts+5;
                 createVoltsGauge();
@@ -407,12 +423,10 @@ function getStats() {
             voltsGauge.value=volts;
 
             var tempC = data["temp_c"];
-/*
             if( firstPlot ) {
                 createTempCPlot();
             }
             addPlotValue(TEMP_PLOT_AREA_ID, formattedDateTime, tempC);
-*/
             if( firstPlot || maxTemp < tempC ) {
                 maxTemp = tempC+5;
                 createTempGauge();
