@@ -1,5 +1,5 @@
 TO DO
-- Add rpc's for voltage and amps calibration
+- Look at current stability on large currents.
 
 # Debug load
 netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
