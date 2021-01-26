@@ -265,7 +265,7 @@ static void pid_loop_cb(void *arg) {
         pwmValue = 0.0;
     }
     //If error reduced to a max of 15%
-    else if( errorFactor > 0.005 || errorFactor < -0.005 ) {
+//    else if( errorFactor > 0.005 || errorFactor < -0.005 ) {
         mulFactor = 1+errorFactor;
         newPWMFactor = pwmValue*mulFactor;
 
@@ -275,7 +275,7 @@ static void pid_loop_cb(void *arg) {
 
         mgos_pwm_set(PWM_PIN, PWM_FREQ, newPWMFactor);
         pwmValue = newPWMFactor;
-    }
+//    }
 
 
 

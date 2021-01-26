@@ -40,8 +40,8 @@ config_schema:
  - ["ydev.group_name",      "s", "",         {title: "The yView group name."}]
  - ["ydev.enable_syslog",   "b", false,      {title: "Enable syslogging."}]
  - ["ydev.max_pp_count",    "d", 60,         {title: "The max number of plot point to be displayed."}]
- - ["ydev.amps_cal_factor", "d", 1.0,        {title: "The current calibration factor."}]
- - ["ydev.volts_cal_factor","d", 1.0,       {title: "The voltage calibration factor."}]
+ - ["ydev.amps_cal_factor", "d", 0.98,       {title: "The current calibration factor."}]
+ - ["ydev.volts_cal_factor","d", 0.997,      {title: "The voltage calibration factor."}]
 
 libs:
  - origin: https://github.com/mongoose-os-libs/boards
