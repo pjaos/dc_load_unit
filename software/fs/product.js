@@ -13,7 +13,6 @@ var setConfigButton = document.getElementById("setConfigButton");
 var factoryDefaultsButton = document.getElementById("setDefaultsButton");
 var rebootButton = document.getElementById("rebootButton");
 var targetAmpsField = document.getElementById("targetAmps");
-var targetWattsField = document.getElementById("targetWatts");
 
 var titleLabel = document.getElementById("titleLabel");
 var devNameField = document.getElementById("devNameText");
@@ -518,14 +517,6 @@ function setTargetAmps() {
         },
     })
 
-}
-
-/**
- * @brief Called when the set watts button is is selected.
- **/
-function setTargetWatts() {
-	uo.debug("setTargetWatts()");
-	//PJA TODO
 }
 
 /**
