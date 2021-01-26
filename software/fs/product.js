@@ -1,6 +1,11 @@
-const TEMP_PLOT_AREA_ID = "tempPlotArea";
+const WATS_PLOT_AREA_ID     = "wattsPlotArea";
+const AMPS_PLOT_AREA_ID     = "ampsPlotArea";
+const VOLTS_PLOT_AREA_ID    = "voltsPlotArea";
+const TEMP_PLOT_AREA_ID     = "tempPlotArea";
 
-var devNameLabel         = document.getElementById("devNameLabel");
+const GUAGE_SIZE            = 250;
+const MAX_FACTOR            = 1.8;
+
 var setAmpsButton        = document.getElementById("set_current");
 var setWattsButton       = document.getElementById("set_watts");
 
@@ -16,24 +21,12 @@ var groupNameField = document.getElementById("groupNameText");
 var enableSyslogCB = document.getElementById("syslogEnableCheckbox");
 var maxPwrPlotPointsField = document.getElementById("maxPwrPlotPoints");
 
-var maxPlotPointsIPF     = document.getElementById("maxPwrPlotPoints");
-
-const guageSize    = 250;
-
-var maxWatts=1;
-var wattsGauge = null;
-
-var maxAmps = 1;
-var ampsGauge = null;
-
-var maxVolts = 1;
-var voltsGauge = null;
-
-var maxTemp = 1;
-var tempGauge = null;
-
-var firstPlot = true;
 var maxPlotPoints=10;
+var firstGetStatsCallback = true;
+var maxWatts=0;
+var maxAmps=0;
+var maxAmps=0;
+var maxAmps=0;
 
 /**
  * @brief A UserOutput class responsible for displaying log messages
@@ -154,6 +147,44 @@ function getTimePlotLayout(yAxisLabel) {
 }
 
 /**
+ * @brief Plot data on a plot
+ * @param plotCanvasName The name of the plot canvas in the html file.
+ * @param traceList A list of traces to plot.
+ * @param layout The layout to use to plot.
+ * @returns 
+ */
+function plot(plotCanvasName, traceList, layout) {
+    // As Plotly is to big to fit in the devices flash it is downloaded direct
+    // and therefore may not be found so wrap in a try/catch block so the
+    // javascript runs if Plotly is not available.
+    try {
+        Plotly.newPlot(plotCanvasName, traceList, layout, {
+            responsive : true
+        });
+    } catch (err) {
+        console.dir(err);
+    }
+}
+
+/**
+ * @param Add a value to the to a pre existing plot
+ * @param plotIDTag The HTML ID tag of the plot canvas.
+ * @param xAxisTime The time to record the temp value.
+ * @param value The value on the Y axis to be plotted.
+ * @returns
+ */
+function addPlotValue(plotIDTag, xAxisTime, value) {
+    // As Plotly is to big to fit in the devices flash it is downloaded direct
+    // and therefore may not be found so wrap in a try/catch block so the
+    // javascript runs if Plotly is not available.
+    try {
+        Plotly.extendTraces(plotIDTag, {y: [[value]], x: [[xAxisTime]]}, [0], maxPlotPoints)
+    } catch (err) {
+        console.dir(err);
+    }
+}
+
+/**
  * @brief Create the watts plot
  */
 function createWattsPlot() {
@@ -162,7 +193,7 @@ function createWattsPlot() {
 
     var trace = getTrace("Power", [], []);
 
-    plot('wattsPlotArea', [ trace ], layout);
+    plot(WATS_PLOT_AREA_ID, [ trace ], layout);
 
     return trace;
 }
@@ -176,7 +207,7 @@ function createAmpsPlot() {
 
     var trace = getTrace("Current", [], []);
 
-    plot('ampsPlotArea', [ trace ], layout);
+    plot(AMPS_PLOT_AREA_ID, [ trace ], layout);
 
     return trace;
 }
@@ -190,7 +221,7 @@ function createVoltsPlot() {
 
     var trace = getTrace("Voltage", [], []);
 
-    plot('voltsPlotArea', [ trace ], layout);
+    plot(VOLTS_PLOT_AREA_ID, [ trace ], layout);
 
     return trace;
 }
@@ -200,23 +231,13 @@ function createVoltsPlot() {
  */
 function createTempCPlot() {
 
-    var layout = getTimePlotLayout("C");
+    var layout = getTimePlotLayout("Centigrade");
 
     var trace = getTrace("Temperature", [], []);
 
     plot(TEMP_PLOT_AREA_ID, [ trace ], layout);
 
     return trace;
-}
-/**
- * @param Add a value to the to a pre existing plot
- * @param plotIDTag The HTML ID tag of the plot canvas.
- * @param xAxisTime The time to record the temp value.
- * @param value The value on the Y axis to be plotted.
- * @returns
- */
-function addPlotValue(plotIDTag, xAxisTime, value) {
-    Plotly.extendTraces(plotIDTag, {y: [[value]], x: [[xAxisTime]]}, [0], maxPlotPoints)
 }
 
 /**
@@ -225,15 +246,23 @@ function addPlotValue(plotIDTag, xAxisTime, value) {
  * @param guageSize
  * @param title
  * @param units
- * @param maxValue
  * @param majorTickCount
  * @param decimalPlaces
- * @returns A RadialGuage object.
+ * @param initialValue
+ * @param maxValue
+ * @return A RadialGuage object.
  */
-function getRadialGauge(renderCanvas, guageSize, title, units, maxValue, majorTickCount, decimalPlaces) {
-    var increment=maxValue/(majorTickCount-1);
+function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, decimalPlaces, initialValue, maxValue) {
+    var maxValue;
+    var increment;
     var tickValue=0;
     var maxList = [];
+    
+    if( maxValue < .1 ) {
+        maxValue = 0.1;
+    }
+    increment = maxValue/(majorTickCount-1);
+    
     for (i = 0; i < majorTickCount; i++) { 
         maxList.push(tickValue.toFixed(decimalPlaces));
         tickValue=tickValue+increment;
@@ -250,6 +279,7 @@ function getRadialGauge(renderCanvas, guageSize, title, units, maxValue, majorTi
         majorTicks: maxList,
         minorTicks: 5,
         strokeTicks: true,
+        value: initialValue,
         highlights: [
             {
                 "from": 0,
@@ -265,54 +295,59 @@ function getRadialGauge(renderCanvas, guageSize, title, units, maxValue, majorTi
  * @brief Init the watts guage.
  * @returns A RadialGuage object for measuring watts.
  */
-function createWattsGauge() {
-    var oldRef = wattsGauge;
-    wattsGauge = getRadialGauge('watts-gauge-canvas',guageSize, 'Power',"Watts", maxWatts, 7, 1 );
+function createWattsGauge(initialValue) {
+    maxWatts = initialValue*MAX_FACTOR;
+    var wattsGauge = getRadialGauge('watts-gauge-canvas',GUAGE_SIZE, 'Power',"Watts", 7, 1, initialValue, maxWatts);
     wattsGauge.draw();
-    if( oldRef != null ) {
-        document.removeChild(oldRef)
-    }
+    return wattsGauge;
+
 }
 
 /**
  * @brief Init the amps guage.
  * @returns A RadialGuage object for measuring amps.
  */
-function createAmpsGauge() {
-    var oldRef = ampsGauge;
-    ampsGauge = getRadialGauge('amps-gauge-canvas',guageSize, 'Current',"Amps", maxAmps, 7, 1 );
+function createAmpsGauge(initialValue) {
+    maxAmps = initialValue*MAX_FACTOR;
+    var ampsGauge = getRadialGauge('amps-gauge-canvas',GUAGE_SIZE, 'Current',"Amps", 7, 1, initialValue, maxAmps);
     ampsGauge.draw();
-    if( oldRef != null ) {
-        document.removeChild(oldRef)
-    }
+    return ampsGauge;
 }
 
 /**
  * @brief Init the volts guage.
  * @returns A RadialGuage object for measuring volts.
  */
-function createVoltsGauge() {
-    var oldRef = voltsGauge;
-    voltsGauge = getRadialGauge('volts-gauge-canvas',guageSize, 'Voltage',"Volts", maxVolts, 7, 1 );
+function createVoltsGauge(initialValue) {
+    maxVolts = initialValue*MAX_FACTOR;
+    var voltsGauge = getRadialGauge('volts-gauge-canvas',GUAGE_SIZE, 'Voltage',"Volts", 7, 1, initialValue, maxVolts);
     voltsGauge.draw();
-    if( oldRef != null ) {
-        document.removeChild(oldRef)
-    }
+    return voltsGauge;
 }
 
 /**
- * @brief Init the temp gauge guage.
+ * @brief Init the temp gauge.
+ * @param , initialValue The initial value of the guage.
  * @returns A RadialGuage object for measuring temp in C.
  */
-function createTempGauge() {
-    var oldRef = tempGauge;
-    tempGauge = getRadialGauge('temp-gauge-canvas',guageSize, 'Temperature',"C", maxTemp, 7, 1 );
+function createTempGauge(initialValue) {
+    maxTemp = initialValue*MAX_FACTOR;
+    var tempGauge = getRadialGauge('temp-gauge-canvas',GUAGE_SIZE, 'Temperature',"Centigrade", 7, 1, initialValue, maxTemp);
     tempGauge.draw();
-    if( oldRef != null ) {
-        document.removeChild(oldRef)
-    }
+    return tempGauge;
 }
 
+/**
+ * @brief Init the cooling guage.
+ * @param , initialValue The initial value of the guage.
+ * @returns A RadialGuage object for measuring cooling (fan on count).
+ */
+function createCoolingGauge(initialValue) {
+    var fanCount = 5;
+    var coolingGauge = getRadialGauge('cooling-gauge-canvas',GUAGE_SIZE, 'Cooling',"Fans On", 6, 0, initialValue, fanCount);
+    coolingGauge.draw();
+    return coolingGauge;
+}
 
 /**
  * @brief Update the view of the device.
@@ -380,81 +415,65 @@ function getStats() {
     $.ajax({
         url: '/rpc/get_stats',
         success: function(data) {
+            timeNow = getTimeNow();
             uo.debug("got stats");
             console.dir(data);
-            formattedDateTime = getTimeNow();
-            var amps = data["amps"];
-
-            if( firstPlot ) {
-                createAmpsPlot();
-            }
-            addPlotValue('ampsPlotArea', formattedDateTime, amps);
-
-            if( firstPlot || maxAmps < amps ) {
-                maxAmps = amps+1;
-                createAmpsGauge();
-            }
-            ampsGauge.value=amps;
-
             var watts = data["watts"];
-
-            if( firstPlot ) {
-                createWattsPlot();
-            }
-            addPlotValue('wattsPlotArea', formattedDateTime, watts);
-
-            if( firstPlot || maxWatts < watts ) {
-                maxWatts = watts+5;
-                createWattsGauge();
-            }
-            wattsGauge.value=watts;
-
+            var amps  = data["amps"];
             var volts = data["volts"];
-
-            if( firstPlot ) {
-                createVoltsPlot();
-            }
-            addPlotValue('voltsPlotArea', formattedDateTime, volts);
-
-            if( firstPlot  || maxVolts < volts ) {
-                maxVolts = volts+5;
-                createVoltsGauge();
-            }
-            voltsGauge.value=volts;
-
             var tempC = data["temp_c"];
-            if( firstPlot ) {
-                createTempCPlot();
-            }
-            addPlotValue(TEMP_PLOT_AREA_ID, formattedDateTime, tempC);
-            if( firstPlot || maxTemp < tempC ) {
-                maxTemp = tempC+5;
-                createTempGauge();
-            }
-            tempGauge.value=tempC;
+            var fanOnCount = data["fan_on_count"];
             
-            firstPlot = false;
+            if( firstGetStatsCallback ) {
+                createWattsPlot();
+                createAmpsPlot();
+                createVoltsPlot();
+                createTempCPlot();
+                
+                wattsGauge = createWattsGauge(watts);
+                ampsGauge = createAmpsGauge(amps);
+                voltsGauge = createVoltsGauge(volts);
+                tempGauge = createTempGauge(tempC);
+                coolingGuage = createCoolingGauge(0)
+                
+                firstGetStatsCallback = false;
+            }
+            else {
+                addPlotValue(WATS_PLOT_AREA_ID, timeNow, watts);
+                addPlotValue(AMPS_PLOT_AREA_ID, timeNow, amps);
+                addPlotValue(VOLTS_PLOT_AREA_ID, timeNow, volts);
+                addPlotValue(TEMP_PLOT_AREA_ID, timeNow, tempC);
+                
+                if( watts > maxWatts ) {
+                    wattsGauge = createWattsGauge(watts);
+                }
+                wattsGauge.value=watts;
+                
+
+                if( amps > maxAmps ) {
+                    ampsGauge = createAmpsGauge(amps);
+                }
+                else {
+                    ampsGauge.value=amps;
+                }
+
+                if( volts > maxVolts ) {
+                    voltsGauge = createVoltsGauge(volts);
+                }
+                else {
+                    voltsGauge.value=volts;
+                }
+                
+                if( tempC > maxTemp ) {
+                    tempGauge = createTempGauge(tempC);
+                }
+                tempGauge.value=tempC;
+                
+                coolingGuage.value=fanOnCount;
+            }
+
         }
     });
-}
-
-/**
- * @brief Plot data on a plot
- * @param plotCanvasName The name of the plot canvas in the html file.
- * @param traceList A list of traces to plot.
- * @param layout The layout to use to plot.
- * @returns 
- */
-function plot(plotCanvasName, traceList, layout) {
-    // As Plotly is to big to fit in the devices flash it is downloaded direct
-    // and therefore may not be found so wrap in a try/catch block so the
-    // javascript runs if Plotly is not available.
-    try {
-        Plotly.newPlot(plotCanvasName, traceList, layout, {
-            responsive : true
-        });
-    } catch (err) {
-    }
 }
 
 /**
@@ -525,7 +544,6 @@ function setConfig() {
     })
     console.dir(jsonStr);
 
-    updateView(true);
     updateView(true);
 
 }

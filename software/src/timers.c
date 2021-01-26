@@ -10,7 +10,6 @@
 #include "fan.h"
 #include "log.h"
 
-#define SYSLOG_MSG_BUF_SIZE 132                   //The maximum size +1 (null character) of syslog messages.
 #define ADS111X_I2C_ADDRESS 72
 #define PWM_PIN             12
 #define PWM_FREQ            78000
@@ -26,16 +25,25 @@
 
 #define NO_AMPS_MV 18.7
 #define CURRENT_ADC_CODES_TO_MV 30.75
-#define ADC_READING_COUNT 3
+#define ADC_READING_COUNT 1 //PJA IS THIS NEEDED
 
 #define MEM_USAGE_TIMER_PERIOD_MS 1000
 #define POLL_TEMP_TIMER_PERIOD_MS 1000
-#define PID_LOOP_TIMER_PERIOD_MS 1000
+#define PID_LOOP_TIMER_PERIOD_MS 250
 
 #define MAX_HEATSINK_TEMP 79.0
 
 #define OFF_LOAD_FACTOR 0.15 //The PWM value at which the load is off
 #define OFF_VOLTAGE 0.05     //If the voltage is lower than this the load is considered off
+
+#define DEFAULT_PROPORTIANAL_COEFF 0.08
+#define DEFAULT_INTEGRAL_COEFF 0.003
+#define DEFAULT_DERIVATIVE_COEFF 0.005
+
+static float kP = DEFAULT_PROPORTIANAL_COEFF;
+static float kI = DEFAULT_INTEGRAL_COEFF;
+static float kD = DEFAULT_DERIVATIVE_COEFF;
+
 
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
@@ -48,7 +56,7 @@ float temp_now = 0.0;
 float amps_now = 0.0;
 float volts_now = 0.0;
 float watts_now = 0.0;
-float load_factor= 0.0;
+float pwmValue = 0.0;
 
 
 /**
@@ -62,7 +70,7 @@ static void mem_usage_cb(void *arg) {
     size_t fs_size            = mgos_get_fs_size();
     size_t fs_free_size       = mgos_get_free_fs_size();
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "uptime=%.2lf, heap=%d, heap_free=%d heap_min=%d, total_disk_space=%d, free_disk_space=%d",  mgos_uptime(), heap_zize, free_heap_size, min_free_heap_size, fs_size, fs_free_size);
-    log_msg(LL_INFO, syslog_msg_buf);
+    log_msg(LL_DEBUG, syslog_msg_buf);
     (void) arg;
 }
 
@@ -97,7 +105,7 @@ static float get_temp(void) {
     float tempC = ( mcp9700_volts - MCP9700_VOUT_0C ) / MCP9700_TC;
 
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "temp_adc=0x%04x, mcp9700_volts=%.3f, tempC=%.1f C, temp_alarm=%d", temp_adc, mcp9700_volts, tempC, temp_alarm);
-    log_msg(LL_INFO, syslog_msg_buf);
+    log_msg(LL_DEBUG, syslog_msg_buf);
 
     return tempC;
 }
@@ -114,9 +122,11 @@ static float get_voltage(void) {
         voltage = 0.0;
     }
 
+    /*
+     * PJA
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=0x%04x voltage=%.3f", voltage_adc, voltage);
     log_msg(LL_INFO, syslog_msg_buf);
-
+*/
     return voltage;
 }
 
@@ -143,10 +153,10 @@ static float get_current(uint8_t off) {
     if( amps < 0.0 ) {
         amps = 0.0;
     }
-
+/*
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "current_adc=0x%04x, sensor_mv=%.1f, measured_mv=%.1f, amps=%.3f", adc_value, sensor_mv, measured_mv, amps);
     log_msg(LL_INFO, syslog_msg_buf);
-
+*/
     return amps;
 }
 
@@ -171,12 +181,12 @@ static void temp_cb(void *arg) {
         set_load(0.0);
         temp_alarm = true;
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! MAX TEMP REACHED (%.1f/%.1f C). TURNED OFF LOAD !!!", temp, MAX_HEATSINK_TEMP );
-        log_msg(LL_INFO, syslog_msg_buf);
+        log_msg(LL_WARN, syslog_msg_buf);
     }
     else {
         temp_alarm = false;
-        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Cooling down (%.1f/%.1f C).", temp, MAX_HEATSINK_TEMP );
-        log_msg(LL_INFO, syslog_msg_buf);
+        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Temp = %.1f (Max = %.1f C).", temp, MAX_HEATSINK_TEMP );
+        log_msg(LL_DEBUG, syslog_msg_buf);
     }
 
     temp_now = temp;
@@ -191,40 +201,104 @@ float get_temp_C(void) {
     return temp_now;
 }
 
+static float get_pid_power(float t_amps, float amps)
+{
+    float error = 0.0;
+    float integral = 0.0;
+    float derivative = 0.0;
+    static float prevError = 0.0;
+    float power  = 1.0;
+
+    if ( t_amps != amps ) {
+        error = t_amps-amps;
+        integral = integral + error;
+
+        if( error == 0.0 || amps > t_amps ) {
+            integral = 0.0;
+        }
+
+        if( error > 1.0 || error < -1.0 ) {
+            integral = 0;
+        }
+
+        derivative = error-prevError;
+        prevError = error;
+        power = error*kP + integral*kI + derivative*kD;
+    }
+
+    return power;
+}
 
 /***
  * @brief Called periodically to read the voltage and current values.
  *        and set the load accordingly.
  */
 static void pid_loop_cb(void *arg) {
-    int64_t start_t = mgos_uptime_micros();
+//    int64_t start_t = mgos_uptime_micros();
     float volts = get_voltage();
     uint8_t load_off = 0;
+    float errorFactor = 0.0;
+    float mulFactor = 0.0;
+    float newPWMFactor = 0;
 
-    int64_t v_read_t = mgos_uptime_micros();
+//    int64_t v_read_t = mgos_uptime_micros();
     //If we have no volts the load must be off or
     //if the PWM setting is set to a value which turns the load off
-    if( volts < OFF_VOLTAGE || load_factor < OFF_LOAD_FACTOR ) {
+//    if( volts < OFF_VOLTAGE || pwmValue < OFF_LOAD_FACTOR || target_amps <= 0.0 ) {
+    if( volts < OFF_VOLTAGE || target_amps <= 0.0 ) {
         load_off=1;
     }
 
     float amps = get_current(load_off);
     float watts = amps * volts;
-    int64_t a_read_t = mgos_uptime_micros();
+//    int64_t a_read_t = mgos_uptime_micros();
 
     //if the user has requested watts
     if( target_watts > 0 ) {
         target_amps = target_watts / volts;
     }
-
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "watts=%.3f, Took %d us to read the voltage, took %d us to read the current. Total %d us.", watts, (int)(v_read_t-start_t), (int)(a_read_t-v_read_t), (int)(a_read_t-start_t) );
+    errorFactor = get_pid_power(target_amps, amps);
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "amps=%.6f, errorFactor=%.6f", amps, errorFactor);
     log_msg(LL_INFO, syslog_msg_buf);
+
+    if( load_off ) {
+        mgos_pwm_set(PWM_PIN, PWM_FREQ, 0.0);
+        target_amps = 0.0;
+        pwmValue = 0.0;
+    }
+    //If error reduced to a max of 15%
+    else if( errorFactor > 0.005 || errorFactor < -0.005 ) {
+        mulFactor = 1+errorFactor;
+        newPWMFactor = pwmValue*mulFactor;
+
+    //    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Took %d us to read the voltage, took %d us to read the current. Total %d us.",(int)(v_read_t-start_t), (int)(a_read_t-v_read_t), (int)(a_read_t-start_t) );
+    //    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, ">>>>>>>>>>> errorFactor=%.6f, mulFactor=%.6f, pwmValue=%.6f, mulFactor=%f, amps=%.3f, target_amps=%.3f, volts=%.3f, load_off=%d", errorFactor, mulFactor, pwmValue, mulFactor, amps, target_amps, volts, load_off);
+
+
+        mgos_pwm_set(PWM_PIN, PWM_FREQ, newPWMFactor);
+        pwmValue = newPWMFactor;
+    }
+
+
 
     amps_now = amps;
     volts_now = volts;
     watts_now = watts;
 
+
     (void) arg;
+}
+
+/**
+ * @brief Set the PID control loop coefficients.
+ * @param p The proportional coefficient.
+ * @param i The integral coefficient.
+ * @param d The derivative coefficient.
+ */
+void set_pid_coeffs(float p, float i, float d) {
+    kP = p;
+    kI = i;
+    kD = d;
 }
 
 /**
@@ -259,9 +333,9 @@ float get_watts(void) {
  * @return void
  */
 void set_load(float factor) {
-    load_factor = factor;
     mgos_pwm_set(PWM_PIN, PWM_FREQ, factor);
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "PWM LOAD VALUE: %.3f", factor);
+    pwmValue = factor;
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "-----------> PWM LOAD VALUE: %.6f", factor);
     log_msg(LL_INFO, syslog_msg_buf);
 }
 
@@ -273,6 +347,26 @@ void set_target_amps(float amps) {
     //If we set the required amps value reset any previous request for power.
     target_watts = 0.0;
     target_amps = amps;
+    pwmValue = 0.15;
+
+    //Set initial PWM level to start PDI loop
+    if( amps >= 0.1) {
+        pwmValue = 0.25;
+    }
+    else if( amps >= 0.5) {
+        pwmValue = 0.3;
+    }
+    else if( amps >= 1.0) {
+        pwmValue = 0.333;
+    }
+    else if( amps >= 1.5) {
+        pwmValue = 0.349;
+    }
+    else if( amps >= 2.0) {
+        pwmValue = 0.362;
+    }
+
+    set_load(pwmValue);
 }
 
 /**

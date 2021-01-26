@@ -7,6 +7,7 @@
 #include "timer.h"
 #include "rpc_handler.h"
 #include "log.h"
+#include "fan.h"
 
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
@@ -308,22 +309,54 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
     float volts = get_volts();
     float watts = get_watts();
     int temp_alarm = get_temp_alarm();
+    int fan_on_count = get_fan_on_count();
 
     mg_rpc_send_responsef(ri, "{"
-                              "amps:%.001f,"
-                              "volts:%.1f,"
-                              "watts:%.1f,"
-                              "temp_c:%.1f,"
-                              "temp_alarm:%d"
+                              "amps:%f,"
+                              "volts:%f,"
+                              "watts:%f,"
+                              "temp_c:%f,"
+                              "temp_alarm:%d,"
+                              "fan_on_count:%d"
                               "}"
                               ,
                               amps,
                               volts,
                               watts,
                               tempC,
-                              temp_alarm
+                              temp_alarm,
+                              fan_on_count
                               );
 
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
+ * @brief Callback handler to set set the target P,I & D pid values value.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_ydev_set_pid_coeffs(struct mg_rpc_request_info *ri,
+                                         void *cb_arg,
+                                         struct mg_rpc_frame_info *fi,
+                                         struct mg_str args) {
+    float p=0.0,i=0.0,d=0.0;
+
+//    if (json_scanf(args.p, args.len, ri->args_fmt, &p, &i, &d) == 1) {
+    if (json_scanf(args.p, args.len, ri->args_fmt, &p, &i, &d) == 3) {
+        mg_rpc_send_responsef(ri, "{P:%lf,I:%lf,D:%lf}", p, i, d);
+        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "PID COEFFS: P:%f I:%f D:%f", p, i, d);
+        log_msg(LL_INFO, syslog_msg_buf);
+        set_pid_coeffs(p, i, d);
+    } else {
+        mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"p\":value,\"i\":value,\"i\":value}");
+    }
+
+    (void) ri;
     (void) cb_arg;
     (void) fi;
     (void) args;
@@ -343,9 +376,11 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "get_stats", NULL, mgos_rpc_get_stats, NULL);
         mg_rpc_add_handler(con, "set_config", SET_CONFIG_RPC_JSON_STRING, mgos_rpc_set_config, NULL);
 
-        mg_rpc_add_handler(con, "pwm", "{pwm: %f}", mgos_rpc_ydev_set_pwm, NULL);
-        mg_rpc_add_handler(con, "target_amps", "{amps: %f}", mgos_rpc_ydev_set_amps, NULL);
-        mg_rpc_add_handler(con, "target_power", "{watts: %f}", mgos_rpc_ydev_set_watts, NULL);
-        mg_rpc_add_handler(con, "debug", "{level: %d}", mgos_sys_set_debug_handler, NULL);
+        mg_rpc_add_handler(con, "pwm", "{pwm: %f}",             mgos_rpc_ydev_set_pwm, NULL);
+        mg_rpc_add_handler(con, "target_amps", "{amps: %f}",    mgos_rpc_ydev_set_amps, NULL);
+        mg_rpc_add_handler(con, "target_power", "{watts: %f}",  mgos_rpc_ydev_set_watts, NULL);
+        mg_rpc_add_handler(con, "debug", "{level: %d}",         mgos_sys_set_debug_handler, NULL);
+
+        mg_rpc_add_handler(con, "pid_coeffs", "{P:%f,I:%f,D:%f}",      mgos_rpc_ydev_set_pid_coeffs, NULL);
 
 }

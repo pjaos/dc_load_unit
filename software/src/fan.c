@@ -10,17 +10,26 @@
 #define FAN4_GPIO 33
 #define FAN5_GPIO 32
 
-#define FAN1_THRESHOLD_TEMP 65
-#define FAN2_THRESHOLD_TEMP 55
-#define FAN3_THRESHOLD_TEMP 45
-#define FAN4_THRESHOLD_TEMP 50
-#define FAN5_THRESHOLD_TEMP 60
+#define FAN1_THRESHOLD_TEMP 70
+#define FAN2_THRESHOLD_TEMP 60
+#define FAN3_THRESHOLD_TEMP 50
+#define FAN4_THRESHOLD_TEMP 55
+#define FAN5_THRESHOLD_TEMP 65
 #define FAN_TEMP_HYSTERESIS  1
 
+static uint8_t fan_on_count;
 
 enum fan_id_list{FAN1=1, FAN2, FAN3, FAN4, FAN5};
 
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
+
+/**
+ * @brief Get the number of cooling fans currently switch on.
+ * @return The number of active fans.
+ */
+uint8_t get_fan_on_count(void) {
+    return fan_on_count;
+}
 
 /**
  * @brief Set the fan on/off state.
@@ -44,7 +53,7 @@ void set_fan_state(uint8_t fan_id, bool on) {
         mgos_gpio_write(FAN5_GPIO, on);
     }
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "%s: FAN: %d, state: %d", __FUNCTION__, fan_id, on);
-    log_msg(LL_INFO, syslog_msg_buf);
+    log_msg(LL_DEBUG, syslog_msg_buf);
 
 }
 
@@ -52,10 +61,11 @@ void set_fan_state(uint8_t fan_id, bool on) {
  * @brief Set a fan on/off.
  * @param fan_id The fan identifier number.
  * @param temp The heat sink temperature.
- * @return void.
+ * @return true if the fan is set on..
  */
-static void update_fan_state(uint8_t fan_id, float temp) {
+static bool update_fan_state(uint8_t fan_id, float temp) {
     float threshold_temp = 0.0;
+    bool fan_on=false;
 
     if( fan_id == FAN1 ) {
         threshold_temp = FAN1_THRESHOLD_TEMP;
@@ -76,19 +86,27 @@ static void update_fan_state(uint8_t fan_id, float temp) {
     //Turn on the fan if required
     if( temp >=  threshold_temp ) {
         set_fan_state(fan_id, true);
+        fan_on = true;
     }
 
     //Turn fan off if required
     if( temp <= threshold_temp-FAN_TEMP_HYSTERESIS ) {
         set_fan_state(fan_id, false);
     }
+
+    return fan_on;
 }
 
 void set_cooling(float temp) {
     int fanID;
+    uint8_t active_fan_count = 0;
+
     for( fanID = FAN1 ; fanID <= FAN5 ; fanID++ ) {
-        update_fan_state(fanID, temp);
+        if( update_fan_state(fanID, temp) ) {
+            active_fan_count++;
+        }
     }
+    fan_on_count = active_fan_count;
 }
 
 /**

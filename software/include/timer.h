@@ -13,5 +13,6 @@ float get_volts(void);
 float get_watts(void);
 float get_temp_C(void);
 float get_temp_alarm(void);
+void set_pid_coeffs(float p, float i, float d);
 
 #endif /* SRC_INCLUDE_TIMERS_H_ */

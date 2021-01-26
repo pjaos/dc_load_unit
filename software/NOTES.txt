@@ -1,7 +1,7 @@
 TO DO
 - Add fan status on/off
-- Add control via PID loop
-- Add RPC's to set calibration values for amps and volts
+- Reverse dials and plots tabs
+- Add rpc's for voltage and amps calibration
 
 # Debug load
 netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
@@ -37,6 +37,10 @@ curl http://192.168.0.245/rpc/get_config
 {"unit_name":"DC Load Unit","group_name":"DC Load Unit","syslog_enabled":1,"max_pp_count":1000,"target_amps":0.000000,"target_watts":0.000000}
 
 curl http://192.168.0.245/rpc/get_stats
-{"amps":0.000000,"volts":0.000000,"watts":0.000000,"temp_c":22.082138,"temp_alarm":0}
+{"amps":0.000000,"volts":28.593967,"watts":0.000000,"temp_c":22.600174,"temp_alarm":0,"fan_on_count":0}
 
+curl http://192.168.0.245/rpc/pid_coeffs -d '{"p":0.5, "i":0.2, "d":0.1}'
+
+curl http://192.168.0.245/rpc/pid_coeffs -d '{"P":0.5, "I":0.1, "D":0.1}'
+{"P":0.500000,"I":0.100000,"D":0.100000}
 
