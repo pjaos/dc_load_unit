@@ -111,7 +111,7 @@ function getRandomInt(min, max) {
  * @returns
  */
 function getTrace(traceName, xValueList, yValueList) {
- //PJA   traceColour = 'rgb(0, 102, 0)';
+   traceColour = 'rgb(0, 102, 0)';
     trace = {
             opacity : 0,
             name : traceName,
@@ -120,7 +120,7 @@ function getTrace(traceName, xValueList, yValueList) {
             fill : 'tozeroy',
             type : 'scatter',
             line : {
-//PJA                color : traceColour,
+                color : traceColour,
                 width : 0,
                 shape : 'spline'
             },
