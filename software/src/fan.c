@@ -17,6 +17,7 @@
 #define FAN5_THRESHOLD_TEMP 65
 #define FAN_TEMP_HYSTERESIS  1
 
+static uint8_t fan_state_array[5] = {0,0,0,0,0};
 static uint8_t fan_on_count;
 
 enum fan_id_list{FAN1=1, FAN2, FAN3, FAN4, FAN5};
@@ -63,9 +64,8 @@ void set_fan_state(uint8_t fan_id, bool on) {
  * @param temp The heat sink temperature.
  * @return true if the fan is set on..
  */
-static bool update_fan_state(uint8_t fan_id, float temp) {
+static void update_fan_state(uint8_t fan_id, float temp) {
     float threshold_temp = 0.0;
-    bool fan_on=false;
 
     if( fan_id == FAN1 ) {
         threshold_temp = FAN1_THRESHOLD_TEMP;
@@ -86,15 +86,15 @@ static bool update_fan_state(uint8_t fan_id, float temp) {
     //Turn on the fan if required
     if( temp >=  threshold_temp ) {
         set_fan_state(fan_id, true);
-        fan_on = true;
+        fan_state_array[fan_id-1]=1;
     }
 
     //Turn fan off if required
     if( temp <= threshold_temp-FAN_TEMP_HYSTERESIS ) {
         set_fan_state(fan_id, false);
+        fan_state_array[fan_id-1]=0;
     }
 
-    return fan_on;
 }
 
 void set_cooling(float temp) {
@@ -102,7 +102,8 @@ void set_cooling(float temp) {
     uint8_t active_fan_count = 0;
 
     for( fanID = FAN1 ; fanID <= FAN5 ; fanID++ ) {
-        if( update_fan_state(fanID, temp) ) {
+        update_fan_state(fanID, temp);
+        if( fan_state_array[fanID-1] ) {
             active_fan_count++;
         }
     }
