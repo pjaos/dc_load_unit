@@ -25,7 +25,7 @@
 
 #define NO_AMPS_MV 18.7
 #define CURRENT_ADC_CODES_TO_MV 30.75
-#define ADC_READING_COUNT 1 //PJA IS THIS NEEDED
+#define ADC_READING_COUNT 1
 
 #define MEM_USAGE_TIMER_PERIOD_MS 1000
 #define POLL_TEMP_TIMER_PERIOD_MS 1000
@@ -122,11 +122,6 @@ static float get_voltage(void) {
         voltage = 0.0;
     }
 
-    /*
-     * PJA
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=0x%04x voltage=%.3f", voltage_adc, voltage);
-    log_msg(LL_INFO, syslog_msg_buf);
-*/
     return voltage;
 }
 
