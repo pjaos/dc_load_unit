@@ -42,3 +42,11 @@ curl http://192.168.0.245/rpc/pid_coeffs -d '{"p":0.5, "i":0.2, "d":0.1}'
 curl http://192.168.0.245/rpc/pid_coeffs -d '{"P":0.5, "I":0.1, "D":0.1}'
 {"P":0.500000,"I":0.100000,"D":0.100000}
 
+curl http://192.168.0.245/rpc/set_current_cal -d '{"cal":1.0}'
+1.000000
+
+curl http://192.168.0.245/rpc/set_voltage_cal -d '{"cal":1.0}'
+1.000000
+
+
+

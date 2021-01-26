@@ -115,9 +115,11 @@ static float get_temp(void) {
  * @return the Voltage in volts.
  */
 static float get_voltage(void) {
+    float volts_cal_value = mgos_sys_config_get_ydev_volts_cal_factor();
+
     uint16_t voltage_adc = read_adc(ADC3, FS_VOLTAGE_2_048, 0);
 //    uint16_t voltage_adc = get_adc_value(ADS111X_I2C_ADDRESS, ADC3, FS_VOLTAGE_2_048, SAMPLES_PER_SECOND_8, 0);
-    float    voltage = voltage_adc/VOLTAGE_CNV_FACTOR;
+    float    voltage = (voltage_adc/VOLTAGE_CNV_FACTOR) * volts_cal_value;
     if( voltage < 0.0 ) {
         voltage = 0.0;
     }
@@ -131,6 +133,7 @@ static float get_voltage(void) {
  * @return The current in amps.
  */
 static float get_current(uint8_t off) {
+    float amps_cal_value = mgos_sys_config_get_ydev_amps_cal_factor();
     uint16_t adc_value = read_adc(ADC1, FS_VOLTAGE_1_024, 1);
 //    uint16_t adc_value = get_adc_value(ADS111X_I2C_ADDRESS, ADC1, FS_VOLTAGE_1_024, SAMPLES_PER_SECOND_8, 1);
     static float no_amps_mv =  NO_AMPS_MV;
@@ -143,7 +146,7 @@ static float get_current(uint8_t off) {
 
     float sensor_mv = adc_value / CURRENT_ADC_CODES_TO_MV;
     float measured_mv = sensor_mv - no_amps_mv;
-    float amps = measured_mv / ADS71220A_MV_PER_AMP;
+    float amps = (measured_mv / ADS71220A_MV_PER_AMP) * amps_cal_value;
     //amps cannot go negative
     if( amps < 0.0 ) {
         amps = 0.0;

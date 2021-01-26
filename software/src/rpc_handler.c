@@ -363,6 +363,64 @@ static void mgos_rpc_ydev_set_pid_coeffs(struct mg_rpc_request_info *ri,
 }
 
 /*
+ * @brief Callback handler to set set the current calibration value.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_sys_set_current_cal_handler(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    float cal_value = 1.0;
+    if (json_scanf(args.p, args.len, ri->args_fmt, &cal_value) == 1) {
+            mg_rpc_send_responsef(ri, "%f", cal_value);
+            snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Current cal value=%f", cal_value);
+            log_msg(LL_INFO, syslog_msg_buf);
+            mgos_sys_config_set_ydev_amps_cal_factor(cal_value);
+            saveConfig();
+    } else {
+      mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"cal\":value}");
+    }
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
+ * @brief Callback handler to set set the voltage calibration value.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_sys_set_voltage_cal_handler(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    float cal_value = 1.0;
+    if (json_scanf(args.p, args.len, ri->args_fmt, &cal_value) == 1) {
+            mg_rpc_send_responsef(ri, "%f", cal_value);
+            snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Voltage cal value=%f", cal_value);
+            log_msg(LL_INFO, syslog_msg_buf);
+            mgos_sys_config_set_ydev_volts_cal_factor(cal_value);
+            saveConfig();
+    } else {
+      mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"cal\":value}");
+    }
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
  * @brief Init all the RPC handlers.
  */
 void rpc_init(void) {
@@ -371,16 +429,15 @@ void rpc_init(void) {
 
         mg_rpc_add_handler(con, "factorydefault", NULL, mgos_rpc_ydev_factorydefault, NULL);
         mg_rpc_add_handler(con, "update_syslog", NULL, mgos_rpc_ydev_update_syslog, NULL);
-
         mg_rpc_add_handler(con, "get_config", NULL, mgos_rpc_get_config, NULL);
         mg_rpc_add_handler(con, "get_stats", NULL, mgos_rpc_get_stats, NULL);
         mg_rpc_add_handler(con, "set_config", SET_CONFIG_RPC_JSON_STRING, mgos_rpc_set_config, NULL);
-
         mg_rpc_add_handler(con, "pwm", "{pwm: %f}",             mgos_rpc_ydev_set_pwm, NULL);
         mg_rpc_add_handler(con, "target_amps", "{amps: %f}",    mgos_rpc_ydev_set_amps, NULL);
         mg_rpc_add_handler(con, "target_power", "{watts: %f}",  mgos_rpc_ydev_set_watts, NULL);
         mg_rpc_add_handler(con, "debug", "{level: %d}",         mgos_sys_set_debug_handler, NULL);
-
         mg_rpc_add_handler(con, "pid_coeffs", "{P:%f,I:%f,D:%f}",      mgos_rpc_ydev_set_pid_coeffs, NULL);
+        mg_rpc_add_handler(con, "set_current_cal", "{cal: %f}",         mgos_sys_set_current_cal_handler, NULL);
+        mg_rpc_add_handler(con, "set_voltage_cal", "{cal: %f}",           mgos_sys_set_voltage_cal_handler, NULL);
 
 }
