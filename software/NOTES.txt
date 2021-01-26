@@ -1,5 +1,4 @@
 TO DO
-- Allow user to set amps from web interface
 - Add rpc's for voltage and amps calibration
 
 # Debug load
