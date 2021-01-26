@@ -499,7 +499,25 @@ function selectTab(evt, cityName) {
  **/
 function setTargetAmps() {
 	uo.debug("setTargetAmps()");
-	//PJA TODO
+
+	var targetAmps = targetAmpsField.value;
+	if( targetAmps > 20 ) {
+        alert("The maximum target current is 20 amps.");
+        return;
+	}
+    
+    var jsonStr = JSON.stringify({
+        amps: targetAmps,
+   }, null, '\t');
+
+   $.ajax({
+        url: '/rpc/target_amps',
+        data: jsonStr,
+        type: 'POST',
+        success: function(data) {
+        },
+    })
+
 }
 
 /**

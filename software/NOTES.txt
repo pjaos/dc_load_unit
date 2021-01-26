@@ -1,6 +1,5 @@
 TO DO
-- Add fan status on/off
-- Reverse dials and plots tabs
+- Allow user to set amps from web interface
 - Add rpc's for voltage and amps calibration
 
 # Debug load
