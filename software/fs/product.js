@@ -7,6 +7,7 @@ const GUAGE_SIZE            = 250;
 const MAX_FACTOR            = 1.8;
 
 var setAmpsButton        = document.getElementById("set_current");
+var resetAmpsButton        = document.getElementById("reset_current");
 var setWattsButton       = document.getElementById("set_watts");
 
 var setConfigButton = document.getElementById("setConfigButton");
@@ -611,13 +612,25 @@ window.onload = function(e){
   	uo.debug("window.onload()");
 	updateView(true);
   
-   setAmpsButton.addEventListener("click", setTargetAmps);
+   setAmpsButton.addEventListener("click", function(event) {
+       if( targetAmpsField.value <= 0 ) {
+           alert("Target current must be greater than 0 to turn on load.");
+       }
+       else {
+           setTargetAmps();
+       }
+       });
    //Set target amps if user presses return in target amps field
    targetAmpsField.addEventListener("keypress", function(event) {
        if (event.keyCode == 13) {
            setTargetAmps();
        }
    });
+   resetAmpsButton.addEventListener("click", function(event) {
+       targetAmpsField.value=0;
+       setTargetAmps();
+   });
+   
 
    setWattsButton.addEventListener("click", setTargetWatts);
 
