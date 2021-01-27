@@ -15,65 +15,44 @@
 
   <div class="tab">
     <button class="tablinks" id="defaultOpen" onclick="selectTab(event, 'Tab1')">Control</button>
-    <button class="tablinks" onclick="selectTab(event, 'Tab2')">Dials</button>
-    <button class="tablinks" onclick="selectTab(event, 'Tab3')">Plots</button>
-    <button class="tablinks" onclick="selectTab(event, 'Tab4')">Configuration</button>
+    <button class="tablinks" onclick="selectTab(event, 'Tab2')">Plots</button>
+    <button class="tablinks" onclick="selectTab(event, 'Tab3')">Configuration</button>
   </div>
 
   <div id="Tab1" class="tabcontent">
     <div class="row form">
+    <fieldset class="panel">
       <TABLE BORDER="0" cellpadding="10">
         <tr>
           <TD>Target Current (Amps):</TD>
           <TD><input id="targetAmps" class="btn btn-sm btn-a" type="number" step="0.1" SIZE="10" title="The required current in Amps."></TD>
           <TD>
-			 <div class="form-control">
-				<button href="#" class="btn btn-sm btn-b" id="set_current">Set</button>
-			 </div>
+             <div class="form-control">
+                <button href="#" class="btn btn-sm btn-b" id="set_current">Set</button>
+             </div>
           </TD>
         </tr>
       </TABLE>
-      <div class="hero"><legend>Command History</legend>
-          <div id="cmd_history"></div>
-      </div>
+     </fieldset>
     </div>
-  </div>
-
-  <div id="Tab2" class="tabcontent">
     <div class="row form">
-     <fieldset class="fieldset-auto-width">
-      <TABLE BORDER="0" cellpadding="10">
-       <tr>
-        <fieldset class="col c1" id="watts-fieldset">
-          <canvas id="watts-gauge-canvas"></canvas>
-        </fieldset>
-       </tr>
-       <tr> 
-        <fieldset class="col c1" id="amps-fieldset">
-          <canvas id="amps-gauge-canvas"></canvas>
-        </fieldset>
-       </tr>
-       <tr>
-        <fieldset class="col c1" id="watts-fieldset">
-          <canvas id="volts-gauge-canvas"></canvas>
-        </fieldset>
-       </tr>
-       <tr>
-        <fieldset class="col c1" id="temp-fieldset">
-          <canvas id="temp-gauge-canvas"></canvas>
-        </fieldset>
-        <fieldset class="col c1" id="temp-fieldset">
-          <canvas id="cooling-gauge-canvas"></canvas>
-        </fieldset>
-       </tr>
-      </TABLE>
+     <fieldset class="panel">
+        <canvas id="amps-gauge-canvas"></canvas>
+        <canvas id="volts-gauge-canvas"></canvas>
+        <canvas id="watts-gauge-canvas"></canvas>
+     </fieldset>
+    </div>
+    <div class="row form">
+     <fieldset class="panel">
+        <canvas id="temp-gauge-canvas"></canvas>
+        <canvas id="cooling-gauge-canvas"></canvas>
      </fieldset>
     </div>
   </div>
     
-  <div id="Tab3" class="tabcontent">
+  <div id="Tab2" class="tabcontent">
     <div class="row form">
-     <fieldset class="fieldset-auto-width">
+     <fieldset class="panel">
       <TABLE BORDER="0" cellpadding="10">
        <tr><div id="wattsPlotArea"></div></tr>
        <tr> <div id="ampsPlotArea"></div></tr>
@@ -84,42 +63,41 @@
     </div>
   </div>
     
-  <div id="Tab4" class="tabcontent">
-    <h3>Configuration</h3>
-
-    <div class="row form">
-      <TABLE BORDER="0">
-        <tr>
-          <TD>Device Name:</TD>
-          <TD><input id="devNameText" class="btn btn-sm btn-a" type="text" SIZE="24" title="Enter the name for this device."></TD>
-        </tr>
-
-        <tr>
-          <TD>Group Name:</TD>
-          <TD><input id="groupNameText" class="btn btn-sm btn-a" type="text" SIZE="24" title="Enter the group name for this device in order to restrict access to group members."></TD>
-        </tr>
-
-        <tr>
-          <TD>Enable Syslog</TD>
-          <TD><input id="syslogEnableCheckbox" type="checkbox" title="Enable syslog. Syslog data will be sent to the ICONS Gateway."></TD>
-        </tr>
-
-		<tr>
-		  <TD>Max power plot points</TD>
-		  <TD><input id="maxPwrPlotPoints" type="number"
-		         title="The maximum number of power plot points. Values greater than 120 may slow your browser."></TD>
-		 </tr>
-                        
-      </TABLE>
-
-      <div class="row form">
-          <button href="#" class="btn btn-sm btn-b" id="setConfigButton" title="Save configuration to the device.">Save</button>
-          <button href="#" class="btn btn-sm btn-c" id="setDefaultsButton" title="Restore the default settings.">Factory Defaults</button>
-          <button href="#" class="btn btn-sm btn-c" id="rebootButton" title="Reboot.">Reboot</button>
-        </div>
-      </div>
-    </div>
-
+  <div id="Tab3" class="tabcontent">
+    <fieldset class="panel">
+	    <div class="row form">
+	      <TABLE BORDER="0">
+	        <tr>
+	          <TD>Device Name:</TD>
+	          <TD><input id="devNameText" class="btn btn-sm btn-a" type="text" SIZE="24" title="Enter the name for this device."></TD>
+	        </tr>
+	
+	        <tr>
+	          <TD>Group Name:</TD>
+	          <TD><input id="groupNameText" class="btn btn-sm btn-a" type="text" SIZE="24" title="Enter the group name for this device in order to restrict access to group members."></TD>
+	        </tr>
+	
+	        <tr>
+	          <TD>Enable Syslog</TD>
+	          <TD><input id="syslogEnableCheckbox" type="checkbox" title="Enable syslog. Syslog data will be sent to the ICONS Gateway."></TD>
+	        </tr>
+	
+			<tr>
+			  <TD>Max power plot points</TD>
+			  <TD><input id="maxPwrPlotPoints" type="number"
+			         title="The maximum number of power plot points. Values greater than 120 may slow your browser."></TD>
+			 </tr>
+	                        
+	      </TABLE>
+	
+	      <div class="row form">
+	          <button href="#" class="btn btn-sm btn-b" id="setConfigButton" title="Save configuration to the device.">Save</button>
+	          <button href="#" class="btn btn-sm btn-c" id="setDefaultsButton" title="Restore the default settings.">Factory Defaults</button>
+	          <button href="#" class="btn btn-sm btn-c" id="rebootButton" title="Reboot.">Reboot</button>
+	        </div>
+	      </div>
+	    </div>
+     </fieldset>
   </div>
 
   <script src="product.js"></script>

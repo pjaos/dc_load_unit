@@ -239,7 +239,7 @@ body {font-family: Arial, Helvetica, sans-serif;}
   padding: 14px 16px;
   transition: 0.3s;
   font-size: 17px;
-  width: 25%;        #This must be set correctly for the number of tabs you have
+  width: 33.33%;        /* This must be set correctly for the number of tabs you have */
 }
 
 /* Change background color of buttons on hover */
@@ -262,4 +262,8 @@ body {font-family: Arial, Helvetica, sans-serif;}
   border-bottom-left-radius: 10px;
 }
 
+.panel {
+    background-color: #f0f0f0;
+    border-radius: 15px;
+}
 
