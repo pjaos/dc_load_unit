@@ -612,11 +612,18 @@ window.onload = function(e){
 	updateView(true);
   
    setAmpsButton.addEventListener("click", setTargetAmps);
+   //Set target amps if user presses return in target amps field
+   targetAmpsField.addEventListener("keypress", function(event) {
+       if (event.keyCode == 13) {
+           setTargetAmps();
+       }
+   });
+
    setWattsButton.addEventListener("click", setTargetWatts);
 
    setConfigButton.addEventListener("click", setConfig);
    factoryDefaultsButton.addEventListener("click", setFactoryDefaults);
-   rebootButton.addEventListener("click", reboot);
+   rebootButton.addEventListener("click", reboot); 
 
 }
 
