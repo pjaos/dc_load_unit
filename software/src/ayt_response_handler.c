@@ -32,10 +32,13 @@ void send_ayt_response(struct mg_connection *nc) {
   char *unit_name         = (char *)mgos_sys_config_get_ydev_unit_name();
   char *group_name        = (char *)mgos_sys_config_get_ydev_group_name();
   char *product_id        = (char *)mgos_sys_config_get_ydev_product_id();
-  static char *services          = "WEB:80";
-  static char *os                = "MONGOOSE_OS";
-  static struct mgos_net_ip_info    ip_info;
-  static struct  json_out       out1 = JSON_OUT_BUF(jbuf, JSON_BUFFER_SIZE);
+  static char *services   = "WEB:80";
+  static char *os         = "MONGOOSE_OS";
+  static struct mgos_net_ip_info ip_info;
+  struct  json_out   out1 = JSON_OUT_BUF(jbuf, JSON_BUFFER_SIZE);
+
+  //Ensure we erase any previous message from the buffer
+  memset(jbuf, 0, sizeof(jbuf) );
 
   //Ensure we don't use NULL pointers.
   if( unit_name == NULL ) {
@@ -70,21 +73,18 @@ SERVICE_LIST:%Q,\n\
 OS:%Q\n\
 }";
 
-  json_printf(&out1, beacon_resp_str, unit_name,
-                                      group_name,
+  json_printf(&out1, beacon_resp_str,
+                    unit_name,
+                    group_name,
                     product_id,
                     sta_ip,
                     services,
                     os);
 
-  if( aty_response_con == NULL ) {
   aty_response_con = mg_connect(mgos_get_mgr(), icons_url, NULL, NULL);
-  aty_response_con->flags |= MG_F_SEND_AND_CLOSE;
-  }
-
   if( aty_response_con != NULL ) {
-  mg_send(aty_response_con, jbuf, strlen(jbuf) );
-  aty_response_con = NULL;
+      mg_send(aty_response_con, jbuf, strlen(jbuf) );
+      aty_response_con->flags |= MG_F_SEND_AND_CLOSE;
   }
 
 }
