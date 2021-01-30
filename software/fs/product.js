@@ -8,7 +8,6 @@ const MAX_FACTOR            = 1.8;
 
 var setAmpsButton        = document.getElementById("set_current");
 var resetAmpsButton        = document.getElementById("reset_current");
-var setWattsButton       = document.getElementById("set_watts");
 
 var setConfigButton = document.getElementById("setConfigButton");
 var factoryDefaultsButton = document.getElementById("setDefaultsButton");
@@ -25,8 +24,8 @@ var maxPlotPoints=10;
 var firstGetStatsCallback = true;
 var maxWatts=0;
 var maxAmps=0;
-var maxAmps=0;
-var maxAmps=0;
+var maxVolts=0;
+var maxTemp=0;
 
 /**
  * @brief A UserOutput class responsible for displaying log messages
@@ -296,10 +295,12 @@ function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, d
  * @returns A RadialGuage object for measuring watts.
  */
 function createWattsGauge(initialValue) {
-    maxWatts = initialValue*MAX_FACTOR;
-    var wattsGauge = getRadialGauge('watts-gauge-canvas',GUAGE_SIZE, 'Power',"Watts", 7, 1, initialValue, maxWatts);
-    wattsGauge.draw();
-    return wattsGauge;
+    if( initialValue > maxWatts ) {
+        maxWatts = initialValue*MAX_FACTOR;
+    }
+    var _wattsGauge = getRadialGauge('watts-gauge-canvas',GUAGE_SIZE, 'Power',"Watts", 7, 1, initialValue, maxWatts);
+    _wattsGauge.draw();
+    return _wattsGauge;
 
 }
 
@@ -308,10 +309,12 @@ function createWattsGauge(initialValue) {
  * @returns A RadialGuage object for measuring amps.
  */
 function createAmpsGauge(initialValue) {
-    maxAmps = initialValue*MAX_FACTOR;
-    var ampsGauge = getRadialGauge('amps-gauge-canvas',GUAGE_SIZE, 'Current',"Amps", 7, 1, initialValue, maxAmps);
-    ampsGauge.draw();
-    return ampsGauge;
+    if( initialValue > maxAmps ) {
+        maxAmps = initialValue*MAX_FACTOR;
+    }
+    var _ampsGauge = getRadialGauge('amps-gauge-canvas',GUAGE_SIZE, 'Current',"Amps", 7, 1, initialValue, maxAmps);
+    _ampsGauge.draw();
+    return _ampsGauge;
 }
 
 /**
@@ -319,10 +322,12 @@ function createAmpsGauge(initialValue) {
  * @returns A RadialGuage object for measuring volts.
  */
 function createVoltsGauge(initialValue) {
-    maxVolts = initialValue*MAX_FACTOR;
-    var voltsGauge = getRadialGauge('volts-gauge-canvas',GUAGE_SIZE, 'Voltage',"Volts", 7, 1, initialValue, maxVolts);
-    voltsGauge.draw();
-    return voltsGauge;
+    if( initialValue > maxVolts ) {
+        maxVolts = initialValue*MAX_FACTOR;
+    }
+    var _voltsGauge = getRadialGauge('volts-gauge-canvas',GUAGE_SIZE, 'Voltage',"Volts", 7, 1, initialValue, maxVolts);
+    _voltsGauge.draw();
+    return _voltsGauge;
 }
 
 /**
@@ -331,10 +336,12 @@ function createVoltsGauge(initialValue) {
  * @returns A RadialGuage object for measuring temp in C.
  */
 function createTempGauge(initialValue) {
-    maxTemp = initialValue*MAX_FACTOR;
-    var tempGauge = getRadialGauge('temp-gauge-canvas',GUAGE_SIZE, 'Temperature',"Centigrade", 7, 1, initialValue, maxTemp);
-    tempGauge.draw();
-    return tempGauge;
+    if( initialValue > maxTemp ) {
+        maxTemp = initialValue*MAX_FACTOR;
+    }
+    var _tempGauge = getRadialGauge('temp-gauge-canvas',GUAGE_SIZE, 'Temperature',"Centigrade", 7, 1, initialValue, maxTemp);
+    _tempGauge.draw();
+    return _tempGauge;
 }
 
 /**
@@ -344,9 +351,9 @@ function createTempGauge(initialValue) {
  */
 function createCoolingGauge(initialValue) {
     var fanCount = 5;
-    var coolingGauge = getRadialGauge('cooling-gauge-canvas',GUAGE_SIZE, 'Cooling',"Fans On", 6, 0, initialValue, fanCount);
-    coolingGauge.draw();
-    return coolingGauge;
+    var _coolingGauge = getRadialGauge('cooling-gauge-canvas',GUAGE_SIZE, 'Cooling',"Fans On", 6, 0, initialValue, fanCount);
+    _coolingGauge.draw();
+    return _coolingGauge;
 }
 
 /**
@@ -397,9 +404,10 @@ function getConfig() {
             
             var targetAmps = data["target_amps"];
             targetAmpsField.value = targetAmps;
-            
+
+            //Not used
             var targetWatts = data["target_watts"];
-            targetWattsField.value = targetWatts;
+
 
         }
     });
@@ -423,19 +431,18 @@ function getStats() {
             var volts = data["volts"];
             var tempC = data["temp_c"];
             var fanOnCount = data["fan_on_count"];
+
+            createWattsGauge(watts);
+            createAmpsGauge(amps);
+            createVoltsGauge(volts);
+            createTempGauge(tempC);
+            createCoolingGauge(fanOnCount)
             
             if( firstGetStatsCallback ) {
                 createWattsPlot();
                 createAmpsPlot();
                 createVoltsPlot();
                 createTempCPlot();
-                
-                wattsGauge = createWattsGauge(watts);
-                ampsGauge = createAmpsGauge(amps);
-                voltsGauge = createVoltsGauge(volts);
-                tempGauge = createTempGauge(tempC);
-                coolingGuage = createCoolingGauge(0)
-                
                 firstGetStatsCallback = false;
             }
             else {
@@ -443,33 +450,6 @@ function getStats() {
                 addPlotValue(AMPS_PLOT_AREA_ID, timeNow, amps);
                 addPlotValue(VOLTS_PLOT_AREA_ID, timeNow, volts);
                 addPlotValue(TEMP_PLOT_AREA_ID, timeNow, tempC);
-                
-                if( watts > maxWatts ) {
-                    wattsGauge = createWattsGauge(watts);
-                }
-                wattsGauge.value=watts;
-                
-
-                if( amps > maxAmps ) {
-                    ampsGauge = createAmpsGauge(amps);
-                }
-                else {
-                    ampsGauge.value=amps;
-                }
-
-                if( volts > maxVolts ) {
-                    voltsGauge = createVoltsGauge(volts);
-                }
-                else {
-                    voltsGauge.value=volts;
-                }
-                
-                if( tempC > maxTemp ) {
-                    tempGauge = createTempGauge(tempC);
-                }
-                tempGauge.value=tempC;
-                
-                coolingGuage.value=fanOnCount;
             }
 
         }
@@ -630,9 +610,6 @@ window.onload = function(e){
        targetAmpsField.value=0;
        setTargetAmps();
    });
-   
-
-   setWattsButton.addEventListener("click", setTargetWatts);
 
    setConfigButton.addEventListener("click", setConfig);
    factoryDefaultsButton.addEventListener("click", setFactoryDefaults);
