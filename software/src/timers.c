@@ -151,10 +151,7 @@ static float get_current(uint8_t off) {
     if( amps < 0.0 ) {
         amps = 0.0;
     }
-/*
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "current_adc=0x%04x, sensor_mv=%.1f, measured_mv=%.1f, amps=%.3f", adc_value, sensor_mv, measured_mv, amps);
-    log_msg(LL_INFO, syslog_msg_buf);
-*/
+
     return amps;
 }
 
@@ -239,17 +236,14 @@ static void pid_loop_cb(void *arg) {
     float mulFactor = 0.0;
     float newPWMFactor = 0;
 
-//    int64_t v_read_t = mgos_uptime_micros();
     //If we have no volts the load must be off or
     //if the PWM setting is set to a value which turns the load off
-//    if( volts < OFF_VOLTAGE || pwmValue < OFF_LOAD_FACTOR || target_amps <= 0.0 ) {
     if( volts < OFF_VOLTAGE || target_amps <= 0.0 ) {
         load_off=1;
     }
 
     float amps = get_current(load_off);
     float watts = amps * volts;
-//    int64_t a_read_t = mgos_uptime_micros();
 
     //if the user has requested watts
     if( target_watts > 0 ) {
@@ -268,11 +262,6 @@ static void pid_loop_cb(void *arg) {
 //    else if( errorFactor > 0.005 || errorFactor < -0.005 ) {
         mulFactor = 1+errorFactor;
         newPWMFactor = pwmValue*mulFactor;
-
-    //    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Took %d us to read the voltage, took %d us to read the current. Total %d us.",(int)(v_read_t-start_t), (int)(a_read_t-v_read_t), (int)(a_read_t-start_t) );
-    //    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, ">>>>>>>>>>> errorFactor=%.6f, mulFactor=%.6f, pwmValue=%.6f, mulFactor=%f, amps=%.3f, target_amps=%.3f, volts=%.3f, load_off=%d", errorFactor, mulFactor, pwmValue, mulFactor, amps, target_amps, volts, load_off);
-
-
         mgos_pwm_set(PWM_PIN, PWM_FREQ, newPWMFactor);
         pwmValue = newPWMFactor;
 //    }
