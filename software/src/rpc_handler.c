@@ -12,6 +12,28 @@
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
 /*
+ * @brief Callback handler to reboot the unit.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_ydev_reboot(struct mg_rpc_request_info *ri,
+                                         void *cb_arg,
+                                         struct mg_rpc_frame_info *fi,
+                                         struct mg_str args) {
+        LOG(LL_INFO, ("Reboot unit.") );
+        mg_rpc_send_responsef(ri, NULL);
+        LOG(LL_INFO, ("Reboot now.") );
+        mgos_system_restart_after(250);
+
+        (void) ri;
+        (void) cb_arg;
+        (void) fi;
+        (void) args;
+}
+
+/*
  * @brief Callback handler to set the device to factory defaults. This will
  *        cause the device to reboot.
  * @param ri
@@ -34,7 +56,6 @@ static void mgos_rpc_ydev_factorydefault(struct mg_rpc_request_info *ri,
         (void) fi;
         (void) args;
 }
-
 
 /*
  * @brief Callback handler to set update the syslog state (enabled/disabled).
@@ -427,6 +448,7 @@ void rpc_init(void) {
 
         struct mg_rpc *con = mgos_rpc_get_global();
 
+        mg_rpc_add_handler(con, "reboot", NULL, mgos_rpc_ydev_reboot, NULL);
         mg_rpc_add_handler(con, "factorydefault", NULL, mgos_rpc_ydev_factorydefault, NULL);
         mg_rpc_add_handler(con, "update_syslog", NULL, mgos_rpc_ydev_update_syslog, NULL);
         mg_rpc_add_handler(con, "get_config", NULL, mgos_rpc_get_config, NULL);
