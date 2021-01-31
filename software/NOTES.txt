@@ -1,5 +1,4 @@
 TO DO
-- Save config, factory defaults and reset buttons are not working
 - Look at current stability on large currents.
 - Add aH calculation to web interface with reset button.
 
@@ -10,6 +9,8 @@ netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
 netplot_spd --text=heap=,heap_free=,heap_min= --debug
 
 #Calling rest IF
+
+curl http://192.168.0.245/rpc/reboot
 
 curl http://192.168.0.245/rpc/factorydefault
 
