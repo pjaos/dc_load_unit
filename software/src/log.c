@@ -32,3 +32,21 @@ void log_msg(uint8_t log_level, char *msg) {
       }
     }
 }
+
+/**
+ * @brief Useful for logging the text of the received messages.
+ *        This logging only goes to the serial port.
+ * @param log_level The log level as defined in cs_log_level.
+ * @param args A pointer to a mg_str struct instance.
+ * @return void
+ */
+void log_mg_str(uint8_t log_level, struct mg_str *args) {
+
+    char *buf = (char *) malloc(args->len+1);
+    if( buf ) {
+        memset(buf, 0, args->len+1);
+        memcpy(buf, args->p, args->len);
+        LOG(log_level, ("RPC RX: %s", buf));
+        free(buf);
+    }
+}

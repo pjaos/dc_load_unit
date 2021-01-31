@@ -205,6 +205,34 @@ static void mgos_sys_set_debug_handler(struct mg_rpc_request_info *ri,
 }
 
 /*
+ * @brief Callback handler to set set the load off voltage.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_set_load_off_voltage(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    float load_off_voltage = 0.0;
+    if (json_scanf(args.p, args.len, ri->args_fmt, &load_off_voltage) == 1) {
+        mg_rpc_send_responsef(ri, "%f", load_off_voltage);
+        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Load off voltage =%f volts", load_off_voltage);
+        log_msg(LL_INFO, syslog_msg_buf);
+        set_load_off_voltage(load_off_voltage);
+    } else {
+      mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"set_load_off_voltage\":volts}");
+    }
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
  * @brief Callback handler to get the config from the device.
  * @param ri
  * @param cb_arg
@@ -260,20 +288,6 @@ static void mgos_rpc_get_config(struct mg_rpc_request_info *ri,
 &enable_syslog,\
 &max_pp_count
 
-/**
- * @brief useful for logging the text of the received messages.
- */
-static void log_mg_str(struct mg_str *args) {
-
-    char *buf = (char *) malloc(args->len+1);
-    if( buf ) {
-        memset(buf, 0, args->len+1);
-        memcpy(buf, args->p, args->len);
-        LOG(LL_INFO, ("RPC RX: %s", buf));
-        free(buf);
-    }
-}
-
 /*
  * @brief Callback handler to allow the user parameters be set from the web page.
  * @param ri
@@ -290,7 +304,7 @@ static void mgos_rpc_set_config(struct mg_rpc_request_info *ri,
     int  enable_syslog=0;
     int  max_pp_count=0;
 
-    log_mg_str(&args);
+    log_mg_str(LL_INFO, &args);
 
     json_scanf(args.p, args.len, ri->args_fmt, SET_CONFIG_JSON_SCANF_ARGS);
 
@@ -461,5 +475,6 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "pid_coeffs", "{P:%f,I:%f,D:%f}",      mgos_rpc_ydev_set_pid_coeffs, NULL);
         mg_rpc_add_handler(con, "set_current_cal", "{cal: %f}",         mgos_sys_set_current_cal_handler, NULL);
         mg_rpc_add_handler(con, "set_voltage_cal", "{cal: %f}",           mgos_sys_set_voltage_cal_handler, NULL);
+        mg_rpc_add_handler(con, "set_load_off_voltage", "{volts: %f}", mgos_rpc_set_load_off_voltage, NULL);
 
 }

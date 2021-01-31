@@ -1,6 +1,7 @@
 TO DO
 - Look at current stability on large currents.
 - Add aH calculation to web interface with reset button.
+- Add ability to configure the minimum load voltage to the GUI.
 
 # Debug load
 netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
@@ -51,5 +52,7 @@ curl http://192.168.0.245/rpc/set_current_cal -d '{"cal":1.0}'
 curl http://192.168.0.245/rpc/set_voltage_cal -d '{"cal":1.0}'
 1.000000
 
+curl http://192.168.0.245/rpc/set_load_off_voltage -d '{"volts":10.0}'
+10.000000
 
 

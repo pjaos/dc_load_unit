@@ -58,6 +58,22 @@ float volts_now = 0.0;
 float watts_now = 0.0;
 float pwmValue = 0.0;
 
+float min_load_voltage   = 0.0;
+bool  load_on            = false;
+bool  last_load_on_state = false;
+float load_on_time_secs  = 0.0; //The time at which the load was last switched on
+float ampSeconds         = 0.0;
+float lastAmpSeconds     = 0.0;
+float wattSeconds        = 0;
+float lastWattSeconds    = 0.0;
+
+/**
+ * @brief Set the voltage limit to turn the load off. If the voltage drops to
+ * this level then the load is turned off.
+ */
+void set_load_off_voltage(float load_off_voltage) {
+    min_load_voltage=load_off_voltage;
+}
 
 /**
  * @brief Callback to send periodic updates of the memory and file system state.
@@ -129,15 +145,13 @@ static float get_voltage(void) {
 
 /**
  * @brief Get the current.
- * @param off If 1 then power is off and no current will be drawn.
  * @return The current in amps.
  */
-static float get_current(uint8_t off) {
+static float get_current() {
     float amps_cal_value = mgos_sys_config_get_ydev_amps_cal_factor();
     uint16_t adc_value = read_adc(ADC1, FS_VOLTAGE_1_024, 1);
-//    uint16_t adc_value = get_adc_value(ADS111X_I2C_ADDRESS, ADC1, FS_VOLTAGE_1_024, SAMPLES_PER_SECOND_8, 1);
     static float no_amps_mv =  NO_AMPS_MV;
-    if( off ) {
+    if( !load_on ) {
         //Calibrate the offset voltage here
         no_amps_mv = adc_value / CURRENT_ADC_CODES_TO_MV;
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "no_amps_mv=%.1f", no_amps_mv);
@@ -224,36 +238,64 @@ static float get_pid_power(float t_amps, float amps)
     return power;
 }
 
+/**
+ * @brief Update the load stats while the load is on.
+ */
+static void update_load_stats(float amps, float watts) {
+
+}
+
+
+/**
+ * @brief Set the load stats when the load has just been turned off.
+ */
+static void set_load_stats(float amps, float watts) {
+
+}
+
 /***
  * @brief Called periodically to read the voltage and current values.
  *        and set the load accordingly.
  */
 static void pid_loop_cb(void *arg) {
-//    int64_t start_t = mgos_uptime_micros();
     float volts = get_voltage();
-    uint8_t load_off = 0;
+    float amps = get_current();
     float errorFactor = 0.0;
     float mulFactor = 0.0;
     float newPWMFactor = 0;
+    float watts = 0;
 
     //If we have no volts the load must be off or
     //if the PWM setting is set to a value which turns the load off
     if( volts < OFF_VOLTAGE || target_amps <= 0.0 ) {
-        load_off=1;
+        load_on = false;
     }
 
-    float amps = get_current(load_off);
-    float watts = amps * volts;
+    //If we have an input voltage and the target amps is set to a non zero value.
+    if( volts >= OFF_VOLTAGE && target_amps > 0.0 ) {
+        load_on = true;
+    }
+
+    if( load_on && min_load_voltage > 0.0 ) {
+        if( volts < min_load_voltage ) {
+            load_on = false;
+            snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Load turned off as voltage dropped to %.2f volts", min_load_voltage);
+            log_msg(LL_INFO, syslog_msg_buf);
+        }
+    }
+
+    watts = amps * volts;
 
     //if the user has requested watts
     if( target_watts > 0 ) {
+        //Calc the amps based on the voltage just read.
         target_amps = target_watts / volts;
     }
     errorFactor = get_pid_power(target_amps, amps);
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "amps=%.6f, errorFactor=%.6f", amps, errorFactor);
     log_msg(LL_INFO, syslog_msg_buf);
 
-    if( load_off ) {
+    if( !load_on ) {
         mgos_pwm_set(PWM_PIN, PWM_FREQ, 0.0);
         target_amps = 0.0;
         pwmValue = 0.0;
@@ -266,12 +308,25 @@ static void pid_loop_cb(void *arg) {
         pwmValue = newPWMFactor;
 //    }
 
-
-
     amps_now = amps;
     volts_now = volts;
     watts_now = watts;
 
+    //If the load on state has changed
+    if( load_on != last_load_on_state ) {
+        //If the load has just been truned on
+        if( load_on ) {
+            load_on_time_secs = mgos_uptime();
+        }
+        //If the load has just been switched off
+        else {
+            set_load_stats(amps, watts);
+        }
+        last_load_on_state = load_on;
+    }
+    else if( load_on ) {
+        update_load_stats(amps, watts);
+    }
 
     (void) arg;
 }
