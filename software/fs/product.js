@@ -2,6 +2,8 @@ const WATS_PLOT_AREA_ID     = "wattsPlotArea";
 const AMPS_PLOT_AREA_ID     = "ampsPlotArea";
 const VOLTS_PLOT_AREA_ID    = "voltsPlotArea";
 const TEMP_PLOT_AREA_ID     = "tempPlotArea";
+const DIAL_TICK_COUNT_6     = 6;
+const DIAL_DECIMAL_PLACES   = 1;
 
 const GUAGE_SIZE            = 250;
 const MAX_FACTOR            = 1.8;
@@ -22,10 +24,11 @@ var maxPwrPlotPointsField = document.getElementById("maxPwrPlotPoints");
 
 var maxPlotPoints=10;
 var firstGetStatsCallback = true;
-var maxWatts=0;
-var maxAmps=0;
-var maxVolts=0;
-var maxTemp=0;
+var wattsGauge;
+var ampsGauge;
+var voltsGauge;
+var tempGauge;
+var coolingGauge;
 
 /**
  * @brief A UserOutput class responsible for displaying log messages
@@ -240,19 +243,17 @@ function createTempCPlot() {
 }
 
 /**
- * @brief Get a radial guage instantiation.
- * @param renderCanvas
- * @param guageSize
- * @param title
- * @param units
- * @param majorTickCount
- * @param decimalPlaces
- * @param initialValue
- * @param maxValue
- * @return A RadialGuage object.
+ * @brief Create and return an instance of a new dial guage. 
+ * @param renderCanvas The canvas ni the html page to draw the guage on.
+ * @param guageSize The size of the guage.
+ * @param title The guage title text.
+ * @param units The guage unit text.
+ * @param majorTickCount The number of major ticks around the guage.
+ * @param initialValue The initial value to be displayed.
+ * @param maxValue The max value for the guage.
+ * @returns 
  */
-function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, decimalPlaces, initialValue, maxValue) {
-    var maxValue;
+function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, initialValue, maxValue) {
     var increment;
     var tickValue=0;
     var maxList = [];
@@ -263,7 +264,7 @@ function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, d
     increment = maxValue/(majorTickCount-1);
     
     for (i = 0; i < majorTickCount; i++) { 
-        maxList.push(tickValue.toFixed(decimalPlaces));
+        maxList.push(tickValue.toFixed(DIAL_DECIMAL_PLACES));
         tickValue=tickValue+increment;
     }
 
@@ -271,37 +272,50 @@ function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, d
         renderTo: renderCanvas,
         width: guageSize,
         height: guageSize,
-        title: title, 
+        title: title,
         units: units,
         minValue: 0,
         maxValue: maxValue,
         majorTicks: maxList,
-        minorTicks: 5,
         strokeTicks: true,
         value: initialValue,
-        highlights: [
-            {
-                "from": 0,
-                "to": maxValue,
-                "color": "rgba(157,172,181, .75)"
-            }
-        ],
+        highlights: false,
     });
     return theGauge;
 }
 
 /**
- * @brief Init the watts guage.
- * @returns A RadialGuage object for measuring watts.
+ * @brief Update the guage value once created.
+ * @param guage The guage instance.
+ * @param value The value to be displayed.
+ * @returns 
  */
-function createWattsGauge(initialValue) {
-    if( initialValue > maxWatts ) {
-        maxWatts = initialValue*MAX_FACTOR;
+function updateGauge(guage, value) {
+    uo.debug("PJA: guage.options.maxValue="+guage.options.maxValue);
+    if( value > guage.options.maxValue ) {
+        var maxValue = Math.ceil( MAX_FACTOR*value );
+        var majorTickCount = DIAL_TICK_COUNT_6;
+        var increment;
+        var tickValue=0;
+        var maxList = [];
+        
+        if( maxValue < .1 ) {
+            maxValue = 0.1;
+        }
+        increment = maxValue/(majorTickCount-1);
+        
+        for (i = 0; i < majorTickCount; i++) { 
+            maxList.push(tickValue.toFixed(DIAL_DECIMAL_PLACES));
+            tickValue=tickValue+increment;
+        }
+        guage.value = value;
+        guage.options.maxValue = maxValue;
+        guage.options.majorTicks = maxList;
+        guage.update();
     }
-    var _wattsGauge = getRadialGauge('watts-gauge-canvas',GUAGE_SIZE, 'Power',"Watts", 7, 1, initialValue, maxWatts);
-    _wattsGauge.draw();
-    return _wattsGauge;
-
+    else {
+        guage.value = value;
+    }
 }
 
 /**
@@ -309,12 +323,13 @@ function createWattsGauge(initialValue) {
  * @returns A RadialGuage object for measuring amps.
  */
 function createAmpsGauge(initialValue) {
-    if( initialValue > maxAmps ) {
-        maxAmps = initialValue*MAX_FACTOR;
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 0.3;
     }
-    var _ampsGauge = getRadialGauge('amps-gauge-canvas',GUAGE_SIZE, 'Current',"Amps", 7, 1, initialValue, maxAmps);
-    _ampsGauge.draw();
-    return _ampsGauge;
+    var guage = getRadialGauge('amps-gauge-canvas',GUAGE_SIZE, 'Current',"Amps", DIAL_TICK_COUNT_6, initialValue, maxValue);
+    guage.draw();
+    return guage;
 }
 
 /**
@@ -322,12 +337,28 @@ function createAmpsGauge(initialValue) {
  * @returns A RadialGuage object for measuring volts.
  */
 function createVoltsGauge(initialValue) {
-    if( initialValue > maxVolts ) {
-        maxVolts = initialValue*MAX_FACTOR;
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 10;
     }
-    var _voltsGauge = getRadialGauge('volts-gauge-canvas',GUAGE_SIZE, 'Voltage',"Volts", 7, 1, initialValue, maxVolts);
-    _voltsGauge.draw();
-    return _voltsGauge;
+    var guage = getRadialGauge('volts-gauge-canvas',GUAGE_SIZE, 'Voltage',"Volts", DIAL_TICK_COUNT_6, initialValue, maxValue);
+    guage.draw();
+    return guage;
+}
+
+/**
+ * @brief Init the watts guage.
+ * @returns A RadialGuage object for measuring watts.
+ */
+function createWattsGauge(initialValue) {
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 5;
+    }
+    var guage = getRadialGauge('watts-gauge-canvas',GUAGE_SIZE, 'Power',"Watts", DIAL_TICK_COUNT_6, initialValue, maxValue);
+    guage.draw();
+    return guage;
+
 }
 
 /**
@@ -336,12 +367,13 @@ function createVoltsGauge(initialValue) {
  * @returns A RadialGuage object for measuring temp in C.
  */
 function createTempGauge(initialValue) {
-    if( initialValue > maxTemp ) {
-        maxTemp = initialValue*MAX_FACTOR;
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 30;
     }
-    var _tempGauge = getRadialGauge('temp-gauge-canvas',GUAGE_SIZE, 'Temperature',"Centigrade", 7, 1, initialValue, maxTemp);
-    _tempGauge.draw();
-    return _tempGauge;
+    var guage = getRadialGauge('temp-gauge-canvas',GUAGE_SIZE, 'Temperature',"Centigrade", DIAL_TICK_COUNT_6, initialValue, maxValue);
+    guage.draw();
+    return guage;
 }
 
 /**
@@ -351,9 +383,9 @@ function createTempGauge(initialValue) {
  */
 function createCoolingGauge(initialValue) {
     var fanCount = 5;
-    var _coolingGauge = getRadialGauge('cooling-gauge-canvas',GUAGE_SIZE, 'Cooling',"Fans On", 6, 0, initialValue, fanCount);
-    _coolingGauge.draw();
-    return _coolingGauge;
+    var guage = getRadialGauge('cooling-gauge-canvas',GUAGE_SIZE, 'Cooling',"Fans On", DIAL_TICK_COUNT_6, initialValue, fanCount);
+    guage.draw();
+    return guage;
 }
 
 /**
@@ -426,32 +458,38 @@ function getStats() {
             timeNow = getTimeNow();
             uo.debug("got stats");
             console.dir(data);
-            var watts = data["watts"];
             var amps  = data["amps"];
+            var watts = data["watts"];
             var volts = data["volts"];
             var tempC = data["temp_c"];
             var fanOnCount = data["fan_on_count"];
 
-            createWattsGauge(watts);
-            createAmpsGauge(amps);
-            createVoltsGauge(volts);
-            createTempGauge(tempC);
-            createCoolingGauge(fanOnCount)
-            
             if( firstGetStatsCallback ) {
-                createWattsPlot();
                 createAmpsPlot();
                 createVoltsPlot();
+                createWattsPlot();
                 createTempCPlot();
+
+                ampsGauge = createAmpsGauge(amps);
+                voltsGauge = createVoltsGauge(volts);
+                wattsGauge = createWattsGauge(watts);
+                tempGauge = createTempGauge(tempC);
+                coolingGauge = createCoolingGauge(fanOnCount)
+    
                 firstGetStatsCallback = false;
             }
             else {
-                addPlotValue(WATS_PLOT_AREA_ID, timeNow, watts);
                 addPlotValue(AMPS_PLOT_AREA_ID, timeNow, amps);
                 addPlotValue(VOLTS_PLOT_AREA_ID, timeNow, volts);
+                addPlotValue(WATS_PLOT_AREA_ID, timeNow, watts);
                 addPlotValue(TEMP_PLOT_AREA_ID, timeNow, tempC);
+                    
+                updateGauge(ampsGauge, amps);
+                updateGauge(voltsGauge, volts);
+                updateGauge(wattsGauge, watts);
+                updateGauge(tempGauge, tempC);
+                updateGauge(coolingGauge, fanOnCount);
             }
-
         }
     });
 }
