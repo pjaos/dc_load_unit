@@ -1,5 +1,7 @@
 TO DO
+- Save config, factory defaults and reset buttons are not working
 - Look at current stability on large currents.
+- Add aH calculation to web interface with reset button.
 
 # Debug load
 netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
