@@ -68,14 +68,6 @@ float wattSeconds        = 0;
 float lastWattSeconds    = 0.0;
 
 /**
- * @brief Set the voltage limit to turn the load off. If the voltage drops to
- * this level then the load is turned off.
- */
-void set_load_off_voltage(float load_off_voltage) {
-    min_load_voltage=load_off_voltage;
-}
-
-/**
  * @brief Callback to send periodic updates of the memory and file system state.
  **/
 static void mem_usage_cb(void *arg) {
@@ -264,6 +256,8 @@ static void pid_loop_cb(void *arg) {
     float mulFactor = 0.0;
     float newPWMFactor = 0;
     float watts = 0;
+
+    min_load_voltage = mgos_sys_config_get_ydev_load_off_voltage();
 
     //If we have no volts the load must be off or
     //if the PWM setting is set to a value which turns the load off

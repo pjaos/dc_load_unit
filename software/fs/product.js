@@ -21,6 +21,7 @@ var devNameField = document.getElementById("devNameText");
 var groupNameField = document.getElementById("groupNameText");
 var enableSyslogCB = document.getElementById("syslogEnableCheckbox");
 var maxPwrPlotPointsField = document.getElementById("maxPwrPlotPoints");
+var loadShutdownVoltageField = document.getElementById("loadShutdownVoltage");
 
 var maxPlotPoints=10;
 var firstGetStatsCallback = true;
@@ -439,7 +440,7 @@ function getConfig() {
 
             //Not used
             var targetWatts = data["target_watts"];
-
+            loadShutdownVoltageField.value =  data["load_off_voltage"];
 
         }
     });
@@ -545,8 +546,9 @@ function setConfig() {
     uo.debug("setConfig()");
 
     var  devName = devNameField.value;
-    var  groupName = devNameField.value;
+    var  groupName = groupNameField.value;
     var _enable_syslog=0;
+    var  shutDownVoltage = loadShutdownVoltageField.value;
     if( enableSyslogCB.checked ) {
         _enable_syslog=1;
     }
@@ -561,6 +563,7 @@ function setConfig() {
         group_name: groupName,
         enable_syslog:_enable_syslog,
         max_pp_count: maxPPCount,
+        load_off_voltage: shutDownVoltage,
    }, null, '\t');
 
    $.ajax({
