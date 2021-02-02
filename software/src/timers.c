@@ -259,6 +259,11 @@ static void pid_loop_cb(void *arg) {
 
     min_load_voltage = mgos_sys_config_get_ydev_load_off_voltage();
 
+    if( volts < 0.03 ) {
+        volts = 0.0;
+    }
+
+
     //If we have no volts the load must be off or
     //if the PWM setting is set to a value which turns the load off
     if( volts < OFF_VOLTAGE || target_amps <= 0.0 ) {
