@@ -78,7 +78,7 @@ static void mem_usage_cb(void *arg) {
     size_t fs_size            = mgos_get_fs_size();
     size_t fs_free_size       = mgos_get_free_fs_size();
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "uptime=%.2lf, heap=%d, heap_free=%d heap_min=%d, total_disk_space=%d, free_disk_space=%d",  mgos_uptime(), heap_zize, free_heap_size, min_free_heap_size, fs_size, fs_free_size);
-    log_msg(LL_DEBUG, syslog_msg_buf);
+    log_msg(LL_INFO, syslog_msg_buf);
     (void) arg;
 }
 
@@ -113,7 +113,7 @@ static float get_temp(void) {
     float tempC = ( mcp9700_volts - MCP9700_VOUT_0C ) / MCP9700_TC;
 
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "temp_adc=0x%04x, mcp9700_volts=%.3f, tempC=%.1f C, temp_alarm=%d", temp_adc, mcp9700_volts, tempC, temp_alarm);
-    log_msg(LL_DEBUG, syslog_msg_buf);
+    log_msg(LL_INFO, syslog_msg_buf);
 
     return tempC;
 }
@@ -187,7 +187,7 @@ static void temp_cb(void *arg) {
     else {
         temp_alarm = false;
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Temp = %.1f (Max = %.1f C).", temp, MAX_HEATSINK_TEMP );
-        log_msg(LL_DEBUG, syslog_msg_buf);
+        log_msg(LL_INFO, syslog_msg_buf);
     }
 
     temp_now = temp;
