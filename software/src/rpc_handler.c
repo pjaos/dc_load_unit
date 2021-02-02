@@ -309,24 +309,22 @@ static void mgos_rpc_set_config(struct mg_rpc_request_info *ri,
     int  enable_syslog=0;
     int  max_pp_count=0;
     float load_off_voltage=0.0;
-
     log_mg_str(LL_INFO, &args);
 
-    json_scanf(args.p, args.len, ri->args_fmt, SET_CONFIG_JSON_SCANF_ARGS);
-    mgos_sys_config_set_ydev_unit_name(dev_name);
-    mgos_sys_config_set_ydev_group_name(group_name);
-    mgos_sys_config_set_ydev_enable_syslog(enable_syslog);
-    mgos_sys_config_set_ydev_max_pp_count(max_pp_count);
-    mgos_sys_config_set_ydev_load_off_voltage(load_off_voltage);
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "PJA: 3 ------------------------> load_off_voltage=%f", load_off_voltage);
-    log_msg(LL_INFO, syslog_msg_buf);
-    saveConfig();
-
-    mg_rpc_send_responsef(ri, NULL);
+    if(  json_scanf(args.p, args.len, ri->args_fmt, SET_CONFIG_JSON_SCANF_ARGS) == 5 ) {
+        mg_rpc_send_responsef(ri, "%s, %s, %d, %d, %f",dev_name, group_name, enable_syslog, max_pp_count, load_off_voltage);
+        mgos_sys_config_set_ydev_unit_name(dev_name);
+        mgos_sys_config_set_ydev_group_name(group_name);
+        mgos_sys_config_set_ydev_enable_syslog(enable_syslog);
+        mgos_sys_config_set_ydev_max_pp_count(max_pp_count);
+        mgos_sys_config_set_ydev_load_off_voltage(load_off_voltage);
+        saveConfig();
+    }
 
     if (dev_name) {
         free(dev_name);
     }
+
     if (group_name) {
         free(group_name);
     }

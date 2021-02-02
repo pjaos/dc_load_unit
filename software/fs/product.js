@@ -634,13 +634,13 @@ window.onload = function(e){
 	updateView(true);
   
    setAmpsButton.addEventListener("click", function(event) {
-       if( targetAmpsField.value <= 0 ) {
-           alert("Target current must be greater than 0 to turn on load.");
-       }
-       else {
-           setTargetAmps();
-       }
-       });
+   if( targetAmpsField.value <= 0 ) {
+       alert("Target current must be greater than 0 to turn on load.");
+   }
+   else {
+       setTargetAmps();
+   }
+   });
    //Set target amps if user presses return in target amps field
    targetAmpsField.addEventListener("keypress", function(event) {
        if (event.keyCode == 13) {
