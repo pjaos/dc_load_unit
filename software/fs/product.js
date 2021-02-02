@@ -652,6 +652,27 @@ window.onload = function(e){
        setTargetAmps();
    });
 
+   devNameField.addEventListener("keypress", function(event) {
+       if (event.keyCode == 13) {
+           setConfig();
+       }
+   });
+   groupNameField.addEventListener("keypress", function(event) {
+       if (event.keyCode == 13) {
+           setConfig();
+       }
+   });
+   maxPwrPlotPointsField.addEventListener("keypress", function(event) {
+       if (event.keyCode == 13) {
+           setConfig();
+       }
+   });
+   loadShutdownVoltageField.addEventListener("keypress", function(event) {
+       if (event.keyCode == 13) {
+           setConfig();
+       }
+   });
+
    setConfigButton.addEventListener("click", setConfig);
    factoryDefaultsButton.addEventListener("click", setFactoryDefaults);
    rebootButton.addEventListener("click", reboot); 
