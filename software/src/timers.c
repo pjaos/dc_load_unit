@@ -31,8 +31,6 @@
 #define POLL_TEMP_TIMER_PERIOD_MS 1000
 #define PID_LOOP_TIMER_PERIOD_MS 250
 
-#define MAX_HEATSINK_TEMP 79.0
-
 #define OFF_LOAD_FACTOR 0.15 //The PWM value at which the load is off
 #define OFF_VOLTAGE 0.05     //If the voltage is lower than this the load is considered off
 
@@ -165,8 +163,17 @@ static float get_current() {
  * @brief Get the temp value.
  * @return temp in C
  */
-float get_temp_alarm(void) {
+bool get_temp_alarm(void) {
     return temp_alarm;
+}
+
+/**
+ * @brief Reset temp alarm.
+ */
+void reset_temp_alarm(void) {
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! RESET TEMP ALARM");
+    log_msg(LL_WARN, syslog_msg_buf);
+    temp_alarm = false;
 }
 
 /***
@@ -184,11 +191,14 @@ static void temp_cb(void *arg) {
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! MAX TEMP REACHED (%.1f/%.1f C). TURNED OFF LOAD !!!", temp, MAX_HEATSINK_TEMP );
         log_msg(LL_WARN, syslog_msg_buf);
     }
+    //PJA
+    /*
     else {
         temp_alarm = false;
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Temp = %.1f (Max = %.1f C).", temp, MAX_HEATSINK_TEMP );
         log_msg(LL_INFO, syslog_msg_buf);
     }
+*/
 
     temp_now = temp;
 

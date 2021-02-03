@@ -259,8 +259,9 @@ function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, i
     var tickValue=0;
     var maxList = [];
     
-    if( maxValue < .1 ) {
-        maxValue = 0.1;
+    maxValue = Math.ceil(maxValue);
+    if( maxValue < 1 ) {
+        maxValue = 1;
     }
     increment = maxValue/(majorTickCount-1);
     
@@ -292,7 +293,6 @@ function getRadialGauge(renderCanvas, guageSize, title, units, majorTickCount, i
  * @returns 
  */
 function updateGauge(guage, value) {
-    uo.debug("PJA: guage.options.maxValue="+guage.options.maxValue);
     if( value > guage.options.maxValue ) {
         var maxValue = Math.ceil( MAX_FACTOR*value );
         var majorTickCount = DIAL_TICK_COUNT_6;
@@ -405,6 +405,21 @@ function updateView(updateConfig) {
 }
 
 /**
+ * @brief Handle a temp alarm.
+ * @returns
+ */
+function handleTempAlarm() {
+    alert("!!! Maximum temperature reached and load turned off !!!");
+    //Reset the temp alarm on the dc load unit.
+    $.ajax({
+        url: '/rpc/reset_temp_alarm',
+        type: 'POST',
+        success: function(data) {
+        },
+    })
+}
+
+/**
  * @brief Get the config params from the device.
  * @returns 
  */
@@ -491,6 +506,13 @@ function getStats() {
                 updateGauge(tempGauge, tempC);
                 updateGauge(coolingGauge, fanOnCount);
             }
+            
+            
+            var tempAlarm = data["temp_alarm"];
+            if( tempAlarm ) {
+                handleTempAlarm();
+            }
+
         }
     });
 }

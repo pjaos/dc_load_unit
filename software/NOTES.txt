@@ -1,7 +1,6 @@
 TO DO
-- Look at current stability on large currents.
 - Add aH calculation to web interface with reset button.
-- Add ability to configure the minimum load voltage to the GUI.
+- Look at current stability on large currents.
 
 # Debug load
 netplot_spd --text=amps=,tempC=,voltage=,watts= --debug
@@ -36,7 +35,9 @@ curl http://192.168.0.245/rpc/debug -d '{"level":2}'
 2
 
 curl http://192.168.0.245/rpc/get_config
-{"unit_name":"DC Load Unit","group_name":"DC Load Unit","syslog_enabled":1,"max_pp_count":1000,"target_amps":0.000000,"target_watts":0.000000}
+{"unit_name":"DC Load Unit","group_name":"DC Load Unit","syslog_enabled":0,"max_pp_count":60,"target_amps":0.0,"target_watts":0.0,"load_off_voltage":0.000000}
+
+curl http://192.168.0.245/rpc/set_config -d '{"dev_name": "DC Load Unit\n","group_name": "","enable_syslog": 1,"max_pp_count": 61,"target_amps": 1.0,"target_watts": 0.0,"load_off_voltage": 2.000000}'
 
 curl http://192.168.0.245/rpc/get_stats
 {"amps":0.000000,"volts":28.593967,"watts":0.000000,"temp_c":22.600174,"temp_alarm":0,"fan_on_count":0}
@@ -55,4 +56,4 @@ curl http://192.168.0.245/rpc/set_voltage_cal -d '{"cal":1.0}'
 curl http://192.168.0.245/rpc/set_load_off_voltage -d '{"volts":10.0}'
 10.000000
 
-
+curl http://192.168.0.245/rpc/reset_temp_alarm

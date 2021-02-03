@@ -29,9 +29,8 @@ config_schema:
  - ["i2c.scl_gpio", "i", 21, {title: "GPIO to use for SCL"}]
  - ["i2c.freq",     "i", 400000, {title: "I2C bus speed (Hz)"}]
  - ["i2c.unit_no",  "i", 0, {title: "Which hardware unit to use, 0 or 1"}]
-# Set debug level to 4 for debug level messages 
-# - ["debug.level", 2]
-
+ - ["debug.level", 0] #Debug off initially, debugging can be turned on via RPC.
+ 
 #These are user configurable attributes
  - ["ydev",                 "o",             {title: "Holds attributes that the user may configure."}]
  - ["user.product_id",      "s", "YDC_LOAD", {title: "The Y product ID (before WiFi setup this is part of AP SSID)"}]
@@ -42,7 +41,7 @@ config_schema:
  - ["ydev.max_pp_count",    "d", 60,         {title: "The max number of plot point to be displayed."}]
  - ["ydev.amps_cal_factor", "d", 0.98,       {title: "The current calibration factor."}]
  - ["ydev.volts_cal_factor","d", 0.997,      {title: "The voltage calibration factor."}]
- - ["ydev.load_off_voltage","d", 0.0,        {title: "The voltage at which the l;oad will switch off."}]
+ - ["ydev.load_off_voltage","d", 0.0,        {title: "The voltage at which the load will switch off."}]
 
 libs:
  - origin: https://github.com/mongoose-os-libs/boards

@@ -462,6 +462,32 @@ static void mgos_sys_set_voltage_cal_handler(struct mg_rpc_request_info *ri,
 }
 
 /*
+ * @brief Callback handler to reset a temp error.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_reset_temp_alarm(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    if ( get_temp_alarm() ) {
+        reset_temp_alarm();
+    }
+    //PJA
+    reset_temp_alarm();
+
+    mg_rpc_send_responsef(ri, NULL);
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
  * @brief Init all the RPC handlers.
  */
 void rpc_init(void) {
@@ -482,5 +508,6 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "set_current_cal", "{cal: %f}",         mgos_sys_set_current_cal_handler, NULL);
         mg_rpc_add_handler(con, "set_voltage_cal", "{cal: %f}",           mgos_sys_set_voltage_cal_handler, NULL);
         mg_rpc_add_handler(con, "set_load_off_voltage", "{volts: %f}", mgos_rpc_set_load_off_voltage, NULL);
+        mg_rpc_add_handler(con, "reset_temp_alarm", NULL, mgos_rpc_reset_temp_alarm, NULL);
 
 }
