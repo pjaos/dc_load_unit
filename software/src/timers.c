@@ -59,11 +59,14 @@ float pwmValue = 0.0;
 float min_load_voltage   = 0.0;
 bool  load_on            = false;
 bool  last_load_on_state = false;
-float load_on_time_secs  = 0.0; //The time at which the load was last switched on
+int64_t start_load_on_time_usecs  = 0.0; //The time at which the load was last switched on
+int64_t stop_load_on_time_usecs  = 0.0; //The time at which the load was switched off
+int64_t last_pid_loop_us = 0;
 float ampSeconds         = 0.0;
-float lastAmpSeconds     = 0.0;
-float wattSeconds        = 0;
-float lastWattSeconds    = 0.0;
+float amp_microseconds   = 0.0;
+float watt_microseconds  = 0.0;
+float previous_amp_microseconds   = 0.0;
+float previous_watt_microseconds  = 0.0;
 
 /**
  * @brief Callback to send periodic updates of the memory and file system state.
@@ -191,14 +194,6 @@ static void temp_cb(void *arg) {
         snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! MAX TEMP REACHED (%.1f/%.1f C). TURNED OFF LOAD !!!", temp, MAX_HEATSINK_TEMP );
         log_msg(LL_WARN, syslog_msg_buf);
     }
-    //PJA
-    /*
-    else {
-        temp_alarm = false;
-        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Temp = %.1f (Max = %.1f C).", temp, MAX_HEATSINK_TEMP );
-        log_msg(LL_INFO, syslog_msg_buf);
-    }
-*/
 
     temp_now = temp;
 
@@ -241,18 +236,116 @@ static float get_pid_power(float t_amps, float amps)
 }
 
 /**
- * @brief Update the load stats while the load is on.
+ * @brief Get the amp hours value while the load is on.
+ * @return The amp hours value.
  */
-static void update_load_stats(float amps, float watts) {
+double get_amp_hours(void) {
+    double amp_hours = amp_microseconds / 3.6E9;
+    return amp_hours;
+}
+
+/**
+ * @brief Get the watt hours value while the load is on.
+ * @return The watt hours value.
+ */
+double get_watt_hours(void) {
+    float watt_hours = watt_microseconds / 3.6E9;
+    return watt_hours;
+}
+
+/**
+ * @brief Get the amp hours value once the load has been switched off.
+ * @return The amp hours value.
+ */
+double get_previous_amp_hours(void) {
+    double amp_hours = previous_amp_microseconds / 3.6E9;
+    return amp_hours;
+}
+
+/**
+ * @return Return the number of seconds that the load has been on for.
+ */
+double get_load_on_secs(void) {
+    int64_t elapsed_usecs = 0;
+    if( load_on ) {
+        int64_t usecs_now = mgos_uptime_micros();
+        elapsed_usecs = usecs_now - start_load_on_time_usecs;
+    }
+    return elapsed_usecs/1E6;
+}
+
+/**
+ * @return Return the number of seconds that the load was previously on for.
+ */
+double get_previous_load_on_secs(void) {
+    double previous_load_on_secs = 0.0;
+    //If the load has been through one on/off cycle
+    if( stop_load_on_time_usecs > start_load_on_time_usecs ) {
+        previous_load_on_secs = stop_load_on_time_usecs-start_load_on_time_usecs/1E6;
+    }
+    return previous_load_on_secs;
+}
+
+/**
+ * @brief Get the watt hours value once the load has been switched off.
+ * @return The watt hours value.
+ */
+double get_previous_watt_hours(void) {
+    float watt_hours = previous_watt_microseconds / 3.6E9;
+    return watt_hours;
+}
+
+/**
+ * @brief Update the amps and watts usage
+ * @param amps The amps beeing drawn now.
+ * @param watts The watts being drawn now.
+ * @return
+ */
+static void update_usage_stats(float amps, float watts) {
+    int64_t us_now = mgos_uptime_micros();
+    int64_t elapsed_us = us_now - last_pid_loop_us; //The elapsed time since the last call to update_usage_stats()
+
+    amp_microseconds += elapsed_us * amps; //Add to the calc of amp microseconds
+    watt_microseconds += elapsed_us * watts; //Add to the calc of watt microseconds
 
 }
 
+/**
+ * @brief Update the load stats while the load is on.
+ */
+static void update_load_stats(float amps, float watts) {
+    update_usage_stats(amps, watts);
+
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "amp_microseconds=%.1f, watt_microseconds=%f", amp_microseconds, watt_microseconds);
+    log_msg(LL_INFO, syslog_msg_buf);
+
+}
 
 /**
- * @brief Set the load stats when the load has just been turned off.
+ * @brief Called when load is switch on to start recording load stats.
  */
-static void set_load_stats(float amps, float watts) {
+static void start_recording_load_stats(void) {
+    start_load_on_time_usecs = mgos_uptime_micros(); //Record the time that the load was switched on
+    amp_microseconds   = 0.0;
+    watt_microseconds  = 0.0;
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Load switch on");
+    log_msg(LL_INFO, syslog_msg_buf);
+}
 
+/**
+ * @brief Called when load is switch off to stop recording load stats.
+ */
+static void stop_recording_load_stats(float amps, float watts) {
+    stop_load_on_time_usecs = mgos_uptime_micros(); //Record the time that the load was switched off
+    update_usage_stats(amps, watts);
+    //Save the last recorded usage stats now the power has gone off
+    previous_amp_microseconds = amp_microseconds;
+    previous_watt_microseconds = watt_microseconds;
+    //Reset the usage stats now
+    amp_microseconds   = 0.0;
+    watt_microseconds  = 0.0;
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Load switch off");
+    log_msg(LL_INFO, syslog_msg_buf);
 }
 
 /***
@@ -272,7 +365,6 @@ static void pid_loop_cb(void *arg) {
     if( volts < 0.03 ) {
         volts = 0.0;
     }
-
 
     //If we have no volts the load must be off or
     //if the PWM setting is set to a value which turns the load off
@@ -323,19 +415,21 @@ static void pid_loop_cb(void *arg) {
 
     //If the load on state has changed
     if( load_on != last_load_on_state ) {
-        //If the load has just been truned on
+        //If the load has just been turned on
         if( load_on ) {
-            load_on_time_secs = mgos_uptime();
+            start_recording_load_stats();
         }
         //If the load has just been switched off
         else {
-            set_load_stats(amps, watts);
+            stop_recording_load_stats(amps, watts);
         }
         last_load_on_state = load_on;
     }
     else if( load_on ) {
         update_load_stats(amps, watts);
     }
+
+    last_pid_loop_us = mgos_uptime_micros();
 
     (void) arg;
 }
@@ -448,6 +542,7 @@ float get_target_watts(void) {
  * @brief Init all timer functions.
  */
 void init_timers(void) {
+    last_pid_loop_us = mgos_uptime_micros();
 
     mgos_set_timer(MEM_USAGE_TIMER_PERIOD_MS, MGOS_TIMER_REPEAT, mem_usage_cb, NULL);
     mgos_set_timer(POLL_TEMP_TIMER_PERIOD_MS, MGOS_TIMER_REPEAT, temp_cb,  NULL);

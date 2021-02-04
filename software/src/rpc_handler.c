@@ -146,6 +146,7 @@ static void mgos_rpc_ydev_set_amps(struct mg_rpc_request_info *ri,
 
 /*
  * @brief Callback handler to set set the target watts value.
+ *        This is not used at the moment as the amps value can vary as the voltage changes.
  * @param ri
  * @param cb_arg
  * @param fi
@@ -351,6 +352,12 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
     float watts = get_watts();
     int temp_alarm = get_temp_alarm();
     int fan_on_count = get_fan_on_count();
+    double amp_hours = get_amp_hours();
+    double watt_hours = get_watt_hours();
+    double previous_amp_hours = get_previous_amp_hours();
+    double previous_watt_hours = get_previous_watt_hours();
+    double load_on_secs = get_load_on_secs();
+    double previous_load_on_secs = get_previous_load_on_secs();
 
     mg_rpc_send_responsef(ri, "{"
                               "amps:%f,"
@@ -358,7 +365,13 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               "watts:%f,"
                               "temp_c:%f,"
                               "temp_alarm:%d,"
-                              "fan_on_count:%d"
+                              "fan_on_count:%d,"
+                              "amp_hours:%f,"
+                              "watt_hours:%f,"
+                              "previous_amp_hours:%f,"
+                              "previous_watt_hours:%f,"
+                              "load_on_secs:%f,"
+                              "previous_load_on_secs:%f"
                               "}"
                               ,
                               amps,
@@ -366,7 +379,13 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               watts,
                               tempC,
                               temp_alarm,
-                              fan_on_count
+                              fan_on_count,
+                              amp_hours,
+                              watt_hours,
+                              previous_amp_hours,
+                              previous_watt_hours,
+                              load_on_secs,
+                              previous_load_on_secs
                               );
 
     (void) cb_arg;

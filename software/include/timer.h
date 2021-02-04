@@ -15,5 +15,11 @@ float get_temp_C(void);
 bool get_temp_alarm(void);
 void set_pid_coeffs(float p, float i, float d);
 void reset_temp_alarm(void);
+double get_amp_hours(void);
+double get_watt_hours(void);
+double get_previous_amp_hours(void);
+double get_previous_watt_hours(void);
+double get_load_on_secs(void);
+double get_previous_load_on_secs(void);
 
 #endif /* SRC_INCLUDE_TIMERS_H_ */

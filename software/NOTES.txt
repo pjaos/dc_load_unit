@@ -1,5 +1,8 @@
 TO DO
+- On/off button should move to column for narrow screens
+- text input field could be smaller, narrower.
 - Add aH calculation to web interface with reset button.
+    Add load on time now and previous load on time to stats
 - Look at current stability on large currents.
 
 # Debug load
