@@ -1,3 +1,4 @@
+const DEBUG                 = false;
 const WATS_PLOT_AREA_ID     = "wattsPlotArea";
 const AMPS_PLOT_AREA_ID     = "ampsPlotArea";
 const VOLTS_PLOT_AREA_ID    = "voltsPlotArea";
@@ -30,6 +31,10 @@ var ampsGauge;
 var voltsGauge;
 var tempGauge;
 var coolingGauge;
+var ampHoursGuage;
+var wattHoursGuage;
+var lastAmpHoursGuage;
+var lastWattHoursGuage;
 
 /**
  * @brief A UserOutput class responsible for displaying log messages
@@ -77,7 +82,7 @@ class UO {
        }
    }
 }
-var uo = new UO(true);
+var uo = new UO(DEBUG);
 
 /**
  * @brief Get the time now in a string that can be used as the X 
@@ -165,7 +170,9 @@ function plot(plotCanvasName, traceList, layout) {
             responsive : true
         });
     } catch (err) {
-        console.dir(err);
+        if( DEBUG ) {
+            console.dir(err);
+        }
     }
 }
 
@@ -183,7 +190,9 @@ function addPlotValue(plotIDTag, xAxisTime, value) {
     try {
         Plotly.extendTraces(plotIDTag, {y: [[value]], x: [[xAxisTime]]}, [0], maxPlotPoints)
     } catch (err) {
-        console.dir(err);
+        if( DEBUG ) {
+            console.dir(err);
+        }
     }
 }
 
@@ -320,13 +329,13 @@ function updateGauge(guage, value) {
 }
 
 /**
- * @brief Init the amps guage.
+ * @brief Init the amps gauge.
  * @returns A RadialGuage object for measuring amps.
  */
 function createAmpsGauge(initialValue) {
     var maxValue = initialValue*MAX_FACTOR;
     if( maxValue == 0 ) {
-        maxValue = 0.3;
+        maxValue = 1;
     }
     var guage = getRadialGauge('amps-gauge-canvas',GUAGE_SIZE, 'Current',"Amps", DIAL_TICK_COUNT_6, initialValue, maxValue);
     guage.draw();
@@ -334,7 +343,7 @@ function createAmpsGauge(initialValue) {
 }
 
 /**
- * @brief Init the volts guage.
+ * @brief Init the volts gauge.
  * @returns A RadialGuage object for measuring volts.
  */
 function createVoltsGauge(initialValue) {
@@ -348,7 +357,7 @@ function createVoltsGauge(initialValue) {
 }
 
 /**
- * @brief Init the watts guage.
+ * @brief Init the watts gauge.
  * @returns A RadialGuage object for measuring watts.
  */
 function createWattsGauge(initialValue) {
@@ -364,7 +373,7 @@ function createWattsGauge(initialValue) {
 
 /**
  * @brief Init the temp gauge.
- * @param , initialValue The initial value of the guage.
+ * @param , initialValue The initial value of the gauge.
  * @returns A RadialGuage object for measuring temp in C.
  */
 function createTempGauge(initialValue) {
@@ -379,12 +388,72 @@ function createTempGauge(initialValue) {
 
 /**
  * @brief Init the cooling guage.
- * @param , initialValue The initial value of the guage.
+ * @param , initialValue The initial value of the gauge.
  * @returns A RadialGuage object for measuring cooling (fan on count).
  */
 function createCoolingGauge(initialValue) {
     var fanCount = 5;
     var guage = getRadialGauge('cooling-gauge-canvas',GUAGE_SIZE, 'Cooling',"Fans On", DIAL_TICK_COUNT_6, initialValue, fanCount);
+    guage.draw();
+    return guage;
+}
+
+/**
+ * @brief Init the amp hours guage.
+ * @param , initialValue The initial value of the gauge.
+ * @returns A RadialGuage object.
+ */
+function createAmpsHoursGauge(initialValue) {
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 1;
+    }
+    var guage = getRadialGauge('amp-hours-gauge-canvas',GUAGE_SIZE, 'Amp Hours',"Ah", DIAL_TICK_COUNT_6, initialValue, maxValue);
+    guage.draw();
+    return guage;
+}
+
+/**
+ * @brief Init the watt hours guage.
+ * @param , initialValue The initial value of the gauge.
+ * @returns A RadialGuage object.
+ */
+function createWattHoursGauge(initialValue) {
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 1;
+    }
+    var guage = getRadialGauge('watt-hours-gauge-canvas',GUAGE_SIZE, 'Watt Hours',"Wh", DIAL_TICK_COUNT_6, initialValue, maxValue);
+    guage.draw();
+    return guage;
+}
+
+/**
+ * @brief Init the last amp hours guage.
+ * @param , initialValue The initial value of the gauge.
+ * @returns A RadialGuage object.
+ */
+function createLastAmpsHoursGauge(initialValue) {
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 1;
+    }
+    var guage = getRadialGauge('last_amp-hours-gauge-canvas',GUAGE_SIZE, 'Last Amp Hours',"Ah", DIAL_TICK_COUNT_6, initialValue, maxValue);
+    guage.draw();
+    return guage;
+}
+
+/**
+ * @brief Init the last watt hours guage.
+ * @param , initialValue The initial value of the gauge.
+ * @returns A RadialGuage object.
+ */
+function createLastWattHoursGauge(initialValue) {
+    var maxValue = initialValue*MAX_FACTOR;
+    if( maxValue == 0 ) {
+        maxValue = 1;
+    }
+    var guage = getRadialGauge('last-watt-hours-gauge-canvas',GUAGE_SIZE, 'Last Watt Hours',"Wh", DIAL_TICK_COUNT_6, initialValue, maxValue);
     guage.draw();
     return guage;
 }
@@ -429,7 +498,9 @@ function getConfig() {
         url: '/rpc/get_config',
         success: function(data) {
             uo.debug("got config");
-            console.dir(data);
+            if( DEBUG ) {
+                console.dir(data);
+            }
 
             var unitName = data["unit_name"];
             if (unitName) {
@@ -473,12 +544,18 @@ function getStats() {
         success: function(data) {
             timeNow = getTimeNow();
             uo.debug("got stats");
-            console.dir(data);
+            if( DEBUG ) {
+                console.dir(data);
+            }
             var amps  = data["amps"];
             var watts = data["watts"];
             var volts = data["volts"];
             var tempC = data["temp_c"];
             var fanOnCount = data["fan_on_count"];
+            var ampHours = data["amp_hours"];
+            var wattHours = data["watt_hours"];
+            var lastAmpHours = data["previous_amp_hours"];
+            var lastWattHours = data["previous_watt_hours"];
 
             if( firstGetStatsCallback ) {
                 createAmpsPlot();
@@ -490,7 +567,11 @@ function getStats() {
                 voltsGauge = createVoltsGauge(volts);
                 wattsGauge = createWattsGauge(watts);
                 tempGauge = createTempGauge(tempC);
-                coolingGauge = createCoolingGauge(fanOnCount)
+                coolingGauge = createCoolingGauge(fanOnCount);
+                ampHoursGuage = createAmpsHoursGauge(ampHours);
+                wattHoursGuage = createWattHoursGauge(wattHours);
+                lastAmpHoursGuage = createLastAmpsHoursGauge(lastAmpHours);
+                lastWattHoursGuage = createLastWattHoursGauge(lastWattHours);
     
                 firstGetStatsCallback = false;
             }
@@ -499,12 +580,16 @@ function getStats() {
                 addPlotValue(VOLTS_PLOT_AREA_ID, timeNow, volts);
                 addPlotValue(WATS_PLOT_AREA_ID, timeNow, watts);
                 addPlotValue(TEMP_PLOT_AREA_ID, timeNow, tempC);
-                    
+
                 updateGauge(ampsGauge, amps);
                 updateGauge(voltsGauge, volts);
                 updateGauge(wattsGauge, watts);
                 updateGauge(tempGauge, tempC);
                 updateGauge(coolingGauge, fanOnCount);
+                updateGauge(ampHoursGuage, ampHours);
+                updateGauge(wattHoursGuage, wattHours);
+                updateGauge(lastAmpHoursGuage, lastAmpHours);
+                updateGauge(lastWattHoursGuage, lastWattHours);
             }
             
             
@@ -540,7 +625,10 @@ function selectTab(evt, cityName) {
  **/
 function setTargetAmps() {
 	uo.debug("setTargetAmps()");
-
+	if( voltsGauge.value == 0 ) {
+        alert("Unable to set load current as no voltage detected on DC load input.");
+        return;	    
+	}
 	var targetAmps = targetAmpsField.value;
 	if( targetAmps > 20 ) {
         alert("The maximum target current is 20 amps.");
@@ -595,7 +683,9 @@ function setConfig() {
         success: function(data) {
         },
     })
-    console.dir(jsonStr);
+    if( DEBUG ) {
+        console.dir(jsonStr);
+    }
 
     updateView(true);
 
