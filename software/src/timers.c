@@ -281,7 +281,7 @@ double get_previous_load_on_secs(void) {
     double previous_load_on_secs = 0.0;
     //If the load has been through one on/off cycle
     if( stop_load_on_time_usecs > start_load_on_time_usecs ) {
-        previous_load_on_secs = stop_load_on_time_usecs-start_load_on_time_usecs/1E6;
+        previous_load_on_secs = (stop_load_on_time_usecs-start_load_on_time_usecs)/1E6;
     }
     return previous_load_on_secs;
 }

@@ -23,6 +23,8 @@ var groupNameField = document.getElementById("groupNameText");
 var enableSyslogCB = document.getElementById("syslogEnableCheckbox");
 var maxPwrPlotPointsField = document.getElementById("maxPwrPlotPoints");
 var loadShutdownVoltageField = document.getElementById("loadShutdownVoltage");
+var loadOnTimeField = document.getElementById("loadOnTime");
+var lastLoadOnTimeField = document.getElementById("lastLoadOnTime");
 
 var maxPlotPoints=10;
 var firstGetStatsCallback = true;
@@ -533,6 +535,27 @@ function getConfig() {
 }
 
 /**
+ * @brief Update the time in the time field.
+ * @param loadOnTimeField The input field.
+ * @param secs The number of seconds that have passed.
+ * @returns
+ */
+function updateTime(loadOnTimeField, secs) {
+    if( secs > 0 ) {
+        var h = Math.floor(secs / 3600);
+        var m = Math.floor(secs % 3600 / 60);
+        var s = Math.floor(secs % 3600 % 60);
+        var fH = ("0" + h).slice(-2);
+        var fM = ("0" + m).slice(-2);
+        var fS = ("0" + s).slice(-2);
+        loadOnTimeField.innerHTML = fH+":"+fM+":"+fS;
+    }
+    else {
+        loadOnTimeField.innerHTML = "00:00:00";
+    }
+}
+
+/**
  * @brief Get the stats (amps, volts etc) from the device.
  * @returns 
  */
@@ -556,6 +579,8 @@ function getStats() {
             var wattHours = data["watt_hours"];
             var lastAmpHours = data["previous_amp_hours"];
             var lastWattHours = data["previous_watt_hours"];
+            var loadOnSecs = data["load_on_secs"]
+            var previousLoadOnSecs = data["previous_load_on_secs"]
 
             if( firstGetStatsCallback ) {
                 createAmpsPlot();
@@ -590,6 +615,9 @@ function getStats() {
                 updateGauge(wattHoursGuage, wattHours);
                 updateGauge(lastAmpHoursGuage, lastAmpHours);
                 updateGauge(lastWattHoursGuage, lastWattHours);
+                
+                updateTime(loadOnTimeField, loadOnSecs);
+                updateTime(lastLoadOnTimeField, previousLoadOnSecs);
             }
             
             

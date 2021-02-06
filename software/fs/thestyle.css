@@ -267,3 +267,8 @@ body {font-family: Arial, Helvetica, sans-serif;}
     border-radius: 15px;
 }
 
+.time1 {
+  font-size: 100px;
+  background-color: #f1f1f1;
+  text-align: center;
+}
