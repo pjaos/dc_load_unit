@@ -417,8 +417,9 @@ static void pid_loop_cb(void *arg) {
     log_msg(LL_INFO, syslog_msg_buf);
 
     //If we have no volts the load must be off or
-    //if the PWM setting is set to a value which turns the load off
-    if( volts < OFF_VOLTAGE || target_amps <= 0.0 ) {
+    //or the PWM setting is set to a value which turns the load off
+    //or the max load voltage has been reached
+    if( volts < OFF_VOLTAGE || target_amps <= 0.0 || max_load_voltage_alarm) {
         load_on = false;
     }
 
