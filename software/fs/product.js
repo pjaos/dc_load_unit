@@ -505,6 +505,22 @@ function handleMinLoadVoltageAlarm() {
     })
 }
 
+
+/**
+ * @brief Handle max load voltage alarm.
+ * @returns
+ */
+function handleMaxLoadVoltageAlarm() {
+    alert("Turned off as the load current as the voltage is above the maximum value of 200 volts.\n\n!!! Reduce the load voltage or damage to the DC Load Unit may occur.");
+    //Reset the max voltage alarm on the dc load unit.
+    $.ajax({
+        url: '/rpc/reset_max_load_voltage_alarm',
+        type: 'POST',
+        success: function(data) {
+        },
+    })
+}
+
 /**
  * @brief Get the config params from the device.
  * @returns 
@@ -644,6 +660,11 @@ function getStats() {
             var minLoadVoltageAlarm = data["min_load_voltage_alarm"];
             if( minLoadVoltageAlarm ) {
                 handleMinLoadVoltageAlarm();
+            }
+
+            var maxLoadVoltageAlarm = data["max_load_voltage_alarm"];
+            if( maxLoadVoltageAlarm ) {
+                handleMaxLoadVoltageAlarm();
             }
 
         }

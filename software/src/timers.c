@@ -38,6 +38,8 @@
 #define DEFAULT_INTEGRAL_COEFF 0.003
 #define DEFAULT_DERIVATIVE_COEFF 0.005
 
+#define MAX_VOLTAGE 200
+
 static float kP = DEFAULT_PROPORTIANAL_COEFF;
 static float kI = DEFAULT_INTEGRAL_COEFF;
 static float kD = DEFAULT_DERIVATIVE_COEFF;
@@ -68,6 +70,8 @@ float amp_microseconds   = 0.0;
 float watt_microseconds  = 0.0;
 float previous_amp_microseconds   = 0.0;
 float previous_watt_microseconds  = 0.0;
+bool  max_load_voltage_alarm = false;
+
 
 /**
  * @brief Callback to send periodic updates of the memory and file system state.
@@ -136,7 +140,11 @@ static float get_voltage(void) {
     if( voltage < 0.0 ) {
         voltage = 0.0;
     }
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=%04x, voltage = %.1f", voltage_adc, voltage);
+    if( voltage >=  MAX_VOLTAGE ) {
+        max_load_voltage_alarm = true;
+    }
+
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=%04x, voltage = %.1f, max_load_voltage_alarm=%d", voltage_adc, voltage, max_load_voltage_alarm);
     log_msg(LL_INFO, syslog_msg_buf);
 
     return voltage;
@@ -200,6 +208,23 @@ void reset_min_load_voltage_alarm(void) {
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! RESET MIN LOAD VOLTAGE ALARM");
     log_msg(LL_WARN, syslog_msg_buf);
     min_load_voltage_alarm = false;
+}
+
+/**
+ * @brief Get the max load voltage alarm state.
+ * @return True if the alarm is set
+ */
+bool get_max_load_voltage_alarm(void) {
+    return max_load_voltage_alarm;
+}
+
+/**
+ * @brief Reset max load voltage alarm.
+ */
+void reset_max_load_voltage_alarm(void) {
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! RESET MAX LOAD VOLTAGE ALARM");
+    log_msg(LL_WARN, syslog_msg_buf);
+    max_load_voltage_alarm = false;
 }
 
 /***

@@ -359,6 +359,7 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
     double load_on_secs = get_load_on_secs();
     double previous_load_on_secs = get_previous_load_on_secs();
     int min_load_voltage_alarm = get_min_load_voltage_alarm();
+    int max_load_voltage_alarm = get_max_load_voltage_alarm();
 
     mg_rpc_send_responsef(ri, "{"
                               "amps:%f,"
@@ -373,7 +374,8 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               "previous_watt_hours:%f,"
                               "load_on_secs:%f,"
                               "previous_load_on_secs:%f,"
-                              "min_load_voltage_alarm:%d"
+                              "min_load_voltage_alarm:%d,"
+                              "max_load_voltage_alarm:%d"
                               "}"
                               ,
                               amps,
@@ -388,7 +390,8 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               previous_watt_hours,
                               load_on_secs,
                               previous_load_on_secs,
-                              min_load_voltage_alarm
+                              min_load_voltage_alarm,
+                              max_load_voltage_alarm
                               );
 
     (void) cb_arg;
@@ -532,6 +535,30 @@ static void mgos_rpc_reset_min_load_voltage_alarm(struct mg_rpc_request_info *ri
 }
 
 /*
+ * @brief Callback handler to reset a max load voltage alarm.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_reset_max_load_voltage_alarm(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    if ( get_max_load_voltage_alarm() ) {
+        reset_max_load_voltage_alarm();
+    }
+
+    mg_rpc_send_responsef(ri, NULL);
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
  * @brief Init all the RPC handlers.
  */
 void rpc_init(void) {
@@ -554,5 +581,6 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "set_load_off_voltage", "{volts: %f}", mgos_rpc_set_load_off_voltage, NULL);
         mg_rpc_add_handler(con, "reset_temp_alarm", NULL, mgos_rpc_reset_temp_alarm, NULL);
         mg_rpc_add_handler(con, "reset_min_load_voltage_alarm", NULL, mgos_rpc_reset_min_load_voltage_alarm, NULL);
+        mg_rpc_add_handler(con, "reset_max_load_voltage_alarm", NULL, mgos_rpc_reset_max_load_voltage_alarm, NULL);
 
 }
