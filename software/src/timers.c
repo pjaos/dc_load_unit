@@ -13,7 +13,7 @@
 #define ADS111X_I2C_ADDRESS 72
 #define PWM_PIN             12
 #define PWM_FREQ            78000
-#define VOLTAGE_CNV_FACTOR  158.46
+#define VOLTAGE_CNV_FACTOR  225.38
 #define MCP9700_CODES_PER_VOLT 16022.0
 #define MCP9700_VOUT_0C        0.5
 #define MCP9700_TC             0.01
@@ -128,11 +128,16 @@ static float get_voltage(void) {
     float volts_cal_value = mgos_sys_config_get_ydev_volts_cal_factor();
 
     uint16_t voltage_adc = read_adc(ADC3, FS_VOLTAGE_2_048, 0);
-//    uint16_t voltage_adc = get_adc_value(ADS111X_I2C_ADDRESS, ADC3, FS_VOLTAGE_2_048, SAMPLES_PER_SECOND_8, 0);
+    //Protect from wrapping
+    if( voltage_adc == 0xffff ) {
+        voltage_adc=0;
+    }
     float    voltage = (voltage_adc/VOLTAGE_CNV_FACTOR) * volts_cal_value;
     if( voltage < 0.0 ) {
         voltage = 0.0;
     }
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=%04x, voltage = %.1f", voltage_adc, voltage);
+    log_msg(LL_INFO, syslog_msg_buf);
 
     return voltage;
 }
@@ -383,6 +388,8 @@ static void pid_loop_cb(void *arg) {
     if( volts < 0.03 ) {
         volts = 0.0;
     }
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "load_on=%d, volts = %.1f, amps=%.3f", load_on, volts, amps);
+    log_msg(LL_INFO, syslog_msg_buf);
 
     //If we have no volts the load must be off or
     //if the PWM setting is set to a value which turns the load off

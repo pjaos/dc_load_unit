@@ -307,7 +307,7 @@ L Device:R R16
 U 1 1 5FA74480
 P 10200 3900
 F 0 "R16" H 10270 3946 50  0000 L CNN
-F 1 "47k" H 10270 3855 50  0000 L CNN
+F 1 "33k" H 10270 3855 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 10130 3900 50  0001 C CNN
 F 3 "~" H 10200 3900 50  0001 C CNN
 	1    10200 3900
@@ -1352,7 +1352,7 @@ V+
 Text GLabel 9850 4350 0    50   Input ~ 0
 IP+
 Text Notes -50  -250 0    50   ~ 0
-Bringup Notes\n\n- Footprint of U1 is not quite the right size but fits\n- Fan connectors screen print is wrong way round\n- Added 2.2 uh inductors to MOSFET gates to stop parasitic OSC\n- Added 470nf cap accross R15.\n\nIf an updated board is built then these inductors should be added.\nAlso C16 should be added.\n\n- It may also be useful to add an alarm sounder device to one of the spare GPIO pins.
+Bringup Notes\n\n- Footprint of U1 is not quite the right size but fits\n- Fan connectors screen print is wrong way round\n- Added 2.2 uh inductors to MOSFET gates to stop parasitic OSC\n- Added 470nf cap accross R15.\n- Change R16 from 47k to 33K to give 289 volt max voltage and better measurement resolution.\n\nIf an updated board is built then these inductors should be added.\nAlso C16 should be added.\n\n- It may also be useful to add an alarm sounder device to one of the spare GPIO pins.
 Text GLabel 5250 3350 0    50   Input ~ 0
 F4
 Wire Wire Line
