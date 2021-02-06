@@ -491,6 +491,21 @@ function handleTempAlarm() {
 }
 
 /**
+ * @brief Handle min load voltage alarm.
+ * @returns
+ */
+function handleMinLoadVoltageAlarm() {
+    alert("Load turned off as the load voltage is below "+loadShutdownVoltageField.value+" volts.");
+    //Reset the min voltage alarm on the dc load unit.
+    $.ajax({
+        url: '/rpc/reset_min_load_voltage_alarm',
+        type: 'POST',
+        success: function(data) {
+        },
+    })
+}
+
+/**
  * @brief Get the config params from the device.
  * @returns 
  */
@@ -624,6 +639,11 @@ function getStats() {
             var tempAlarm = data["temp_alarm"];
             if( tempAlarm ) {
                 handleTempAlarm();
+            }
+
+            var minLoadVoltageAlarm = data["min_load_voltage_alarm"];
+            if( minLoadVoltageAlarm ) {
+                handleMinLoadVoltageAlarm();
             }
 
         }

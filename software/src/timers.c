@@ -57,6 +57,7 @@ float watts_now = 0.0;
 float pwmValue = 0.0;
 
 float min_load_voltage   = 0.0;
+bool  min_load_voltage_alarm = false;
 bool  load_on            = false;
 bool  last_load_on_state = false;
 int64_t start_load_on_time_usecs  = 0.0; //The time at which the load was last switched on
@@ -177,6 +178,23 @@ void reset_temp_alarm(void) {
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! RESET TEMP ALARM");
     log_msg(LL_WARN, syslog_msg_buf);
     temp_alarm = false;
+}
+
+/**
+ * @brief Get the min load voltage alarm state.
+ * @return True if the alarm is set
+ */
+bool get_min_load_voltage_alarm(void) {
+    return min_load_voltage_alarm;
+}
+
+/**
+ * @brief Reset min load voltage alarm.
+ */
+void reset_min_load_voltage_alarm(void) {
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "!!! RESET MIN LOAD VOLTAGE ALARM");
+    log_msg(LL_WARN, syslog_msg_buf);
+    min_load_voltage_alarm = false;
 }
 
 /***
@@ -382,6 +400,7 @@ static void pid_loop_cb(void *arg) {
             load_on = false;
             snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Load turned off as voltage dropped to %.2f volts", min_load_voltage);
             log_msg(LL_INFO, syslog_msg_buf);
+            min_load_voltage_alarm = true;
         }
     }
 

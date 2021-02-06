@@ -21,5 +21,7 @@ double get_previous_amp_hours(void);
 double get_previous_watt_hours(void);
 double get_load_on_secs(void);
 double get_previous_load_on_secs(void);
+bool get_min_load_voltage_alarm(void);
+void reset_min_load_voltage_alarm(void);
 
 #endif /* SRC_INCLUDE_TIMERS_H_ */
