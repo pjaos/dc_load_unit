@@ -360,6 +360,7 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
     double previous_load_on_secs = get_previous_load_on_secs();
     int min_load_voltage_alarm = get_min_load_voltage_alarm();
     int max_load_voltage_alarm = get_max_load_voltage_alarm();
+    int audio_alarm = get_audio_alarm();
 
     mg_rpc_send_responsef(ri, "{"
                               "amps:%f,"
@@ -375,7 +376,8 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               "load_on_secs:%f,"
                               "previous_load_on_secs:%f,"
                               "min_load_voltage_alarm:%d,"
-                              "max_load_voltage_alarm:%d"
+                              "max_load_voltage_alarm:%d,"
+                              "audio_alarm:%d"
                               "}"
                               ,
                               amps,
@@ -391,7 +393,8 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               load_on_secs,
                               previous_load_on_secs,
                               min_load_voltage_alarm,
-                              max_load_voltage_alarm
+                              max_load_voltage_alarm,
+                              audio_alarm
                               );
 
     (void) cb_arg;
@@ -487,6 +490,34 @@ static void mgos_sys_set_voltage_cal_handler(struct mg_rpc_request_info *ri,
 }
 
 /*
+ * @brief Callback handler to set set the voltage calibration value.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_sys_set_max_pwm_handler(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    float pwm_value = 1.0;
+    if (json_scanf(args.p, args.len, ri->args_fmt, &pwm_value) == 1) {
+            mg_rpc_send_responsef(ri, "%f", pwm_value);
+            snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "Set pwm_value = %f", pwm_value);
+            log_msg(LL_INFO, syslog_msg_buf);
+            set_max_pwm(pwm_value);
+    } else {
+      mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"cal\":value}");
+    }
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+/*
  * @brief Callback handler to reset a temp alarm.
  * @param ri
  * @param cb_arg
@@ -559,6 +590,37 @@ static void mgos_rpc_reset_max_load_voltage_alarm(struct mg_rpc_request_info *ri
 }
 
 /*
+ * @brief Callback handler to set/reset the audio alarm.
+ * @param ri
+ * @param cb_arg
+ * @param fi
+ * @param args
+ */
+static void mgos_rpc_set_audio_alarm(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+
+    int audio_alarm = 0;
+    if (json_scanf(args.p, args.len, ri->args_fmt, &audio_alarm) == 1) {
+            mg_rpc_send_responsef(ri, "%d", audio_alarm);
+            snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "audio_alarm = %d", audio_alarm);
+            log_msg(LL_INFO, syslog_msg_buf);
+            //0 = off, 1 = on.
+            set_audio_alarm(audio_alarm);
+    } else {
+      mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"on\":value}");
+    }
+
+    (void) ri;
+    (void) cb_arg;
+    (void) fi;
+    (void) args;
+}
+
+
+
+/*
  * @brief Init all the RPC handlers.
  */
 void rpc_init(void) {
@@ -582,5 +644,7 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "reset_temp_alarm", NULL, mgos_rpc_reset_temp_alarm, NULL);
         mg_rpc_add_handler(con, "reset_min_load_voltage_alarm", NULL, mgos_rpc_reset_min_load_voltage_alarm, NULL);
         mg_rpc_add_handler(con, "reset_max_load_voltage_alarm", NULL, mgos_rpc_reset_max_load_voltage_alarm, NULL);
+        mg_rpc_add_handler(con, "set_max_pwm", "{value: %f}",           mgos_sys_set_max_pwm_handler, NULL);
+        mg_rpc_add_handler(con, "set_audio_alarm", "{on: %d}", mgos_rpc_set_audio_alarm, NULL);
 
 }

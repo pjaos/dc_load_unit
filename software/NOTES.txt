@@ -1,8 +1,5 @@
 TO DO
-- On/off button should move to column for narrow screens
-- text input field could be smaller, narrower.
-- Add aH calculation to web interface with reset button.
-    Add load on time now and previous load on time to stats
+- Enable/Disable Javascript debugging messages
 - Look at current stability on large currents.
 
 # Debug load
@@ -43,9 +40,7 @@ curl http://192.168.0.245/rpc/get_config
 curl http://192.168.0.245/rpc/set_config -d '{"dev_name": "DC Load Unit\n","group_name": "","enable_syslog": 1,"max_pp_count": 61,"target_amps": 1.0,"target_watts": 0.0,"load_off_voltage": 2.000000}'
 
 curl http://192.168.0.245/rpc/get_stats
-{"amps":0.000000,"volts":28.593967,"watts":0.000000,"temp_c":22.600174,"temp_alarm":0,"fan_on_count":0}
-
-curl http://192.168.0.245/rpc/pid_coeffs -d '{"p":0.5, "i":0.2, "d":0.1}'
+{"amps":0.003405,"volts":0.000000,"watts":0.000000,"temp_c":20.465612,"temp_alarm":0,"fan_on_count":0,"amp_hours":0.000000,"watt_hours":0.000000,"previous_amp_hours":0.000000,"previous_watt_hours":0.000000,"load_on_secs":0.000000,"previous_load_on_secs":0.000000,"min_load_voltage_alarm":0,"max_load_voltage_alarm":0,"audio_alarm":0}
 
 curl http://192.168.0.245/rpc/pid_coeffs -d '{"P":0.5, "I":0.1, "D":0.1}'
 {"P":0.500000,"I":0.100000,"D":0.100000}
@@ -60,3 +55,14 @@ curl http://192.168.0.245/rpc/set_load_off_voltage -d '{"volts":10.0}'
 10.000000
 
 curl http://192.168.0.245/rpc/reset_temp_alarm
+
+curl http://192.168.0.245/rpc/reset_min_load_voltage_alarm
+
+curl http://192.168.0.245/rpc/reset_max_load_voltage_alarm
+
+curl http://192.168.0.245/rpc/set_max_pwm -d '{"value":0.36}'
+
+curl http://192.168.0.245/rpc/set_audio_alarm -d '{"on":1}'
+
+
+

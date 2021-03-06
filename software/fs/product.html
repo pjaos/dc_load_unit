@@ -21,9 +21,14 @@
   </div>
 
   <div id="Tab1" class="tabcontent">
+    <div class="row form" id="audio_alarm_div" style="display: none;">
+        <fieldset class="panel">
+            <button href="#" class="btn btn-sm btn-c" id="reset_audio_alarm">Reset Audio Alarm</button>
+        </fieldset>
+    </div>
     <div class="row form">
         <fieldset class="panel">
-            <TD><input id="targetAmps" class="btn btn-sm btn-a" type="number" step="0.5" SIZE="10" title="The required current in Amps."></TD>
+            <TD>Target current (Amps)  <input id="targetAmps" class="btn btn-sm btn-a" type="number" step="0.5" SIZE="10" title="The required current in Amps."></TD>
             <button href="#" class="btn btn-sm btn-b" id="set_current">On</button>
             <button href="#" class="btn btn-sm btn-c" id="reset_current">Off</button>
         </fieldset>

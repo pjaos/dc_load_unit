@@ -5,12 +5,16 @@ const VOLTS_PLOT_AREA_ID    = "voltsPlotArea";
 const TEMP_PLOT_AREA_ID     = "tempPlotArea";
 const DIAL_TICK_COUNT_6     = 6;
 const DIAL_DECIMAL_PLACES   = 1;
+const MAX_AMPS              = 10.0;
+const MAX_WATTS             = 200;
 
 const GUAGE_SIZE            = 250;
 const MAX_FACTOR            = 1.8;
 
 var setAmpsButton        = document.getElementById("set_current");
 var resetAmpsButton        = document.getElementById("reset_current");
+var resetAudioAlarmButton = document.getElementById("reset_audio_alarm");
+var audioAlarmDiv = document.getElementById("audio_alarm_div");
 
 var setConfigButton = document.getElementById("setConfigButton");
 var factoryDefaultsButton = document.getElementById("setDefaultsButton");
@@ -666,7 +670,14 @@ function getStats() {
             if( maxLoadVoltageAlarm ) {
                 handleMaxLoadVoltageAlarm();
             }
-
+            
+            var audioAlarm = data["audio_alarm"];
+            if( audioAlarm != 0 ) {
+                audioAlarmDiv.style.display = "block";
+            }
+            else {
+                audioAlarmDiv.style.display = "none";
+            }
         }
     });
 }
@@ -699,11 +710,17 @@ function setTargetAmps() {
         return;	    
 	}
 	var targetAmps = targetAmpsField.value;
-	if( targetAmps > 20 ) {
-        alert("The maximum target current is 20 amps.");
+	if( targetAmps > MAX_AMPS ) {
+        alert("The maximum target current is "+MAX_AMPS+" amps.");
         return;
 	}
-    
+	
+	var expectedWatts = voltsGauge.value * targetAmps;
+	if ( expectedWatts > MAX_WATTS ){
+        alert("This would set the load to "+expectedWatts+" watts (max watts = "+MAX_WATTS+").");
+        return;
+	}
+
     var jsonStr = JSON.stringify({
         amps: targetAmps,
    }, null, '\t');
@@ -716,6 +733,23 @@ function setTargetAmps() {
         },
     })
 
+}
+
+/**
+ * @brief Reset an audio alarm on the dc load unit.
+ **/
+function resetAudioAlarm() {
+    var jsonStr = JSON.stringify({
+        on: 0,
+    }, null, '\t');
+
+    $.ajax({
+        url: '/rpc/set_audio_alarm',
+        data: jsonStr,
+        type: 'POST',
+        success: function(data) {
+        },
+    })
 }
 
 /**
@@ -831,6 +865,10 @@ window.onload = function(e){
    resetAmpsButton.addEventListener("click", function(event) {
        targetAmpsField.value=0;
        setTargetAmps();
+   });
+
+   resetAudioAlarmButton.addEventListener("click", function(event) {
+       resetAudioAlarm();
    });
 
    devNameField.addEventListener("keypress", function(event) {
