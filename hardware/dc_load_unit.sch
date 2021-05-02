@@ -6,7 +6,7 @@ encoding utf-8
 Sheet 1 2
 Title "DC Load Unit"
 Date "1/11/2020"
-Rev "1.0"
+Rev "1.3"
 Comp ""
 Comment1 ""
 Comment2 ""
@@ -1268,7 +1268,7 @@ L Device:R R27
 U 1 1 5FC12494
 P 6050 5900
 F 0 "R27" V 5843 5900 50  0000 C CNN
-F 1 "47k" V 5934 5900 50  0000 C CNN
+F 1 "0R" V 5934 5900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 5980 5900 50  0001 C CNN
 F 3 "~" H 6050 5900 50  0001 C CNN
 	1    6050 5900
@@ -1279,103 +1279,8 @@ Wire Wire Line
 Wire Wire Line
 	5900 5900 5850 5900
 Connection ~ 5850 5900
-$Comp
-L Device:R R25
-U 1 1 5FC47748
-P 3800 6850
-F 0 "R25" H 3870 6896 50  0000 L CNN
-F 1 "2.2k" H 3870 6805 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 3730 6850 50  0001 C CNN
-F 3 "~" H 3800 6850 50  0001 C CNN
-	1    3800 6850
-	1    0    0    -1  
-$EndComp
-$Comp
-L Device:R R24
-U 1 1 5FC48473
-P 3800 6250
-F 0 "R24" H 3870 6296 50  0000 L CNN
-F 1 "6.8k" H 3870 6205 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 3730 6250 50  0001 C CNN
-F 3 "~" H 3800 6250 50  0001 C CNN
-	1    3800 6250
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	3300 5700 3800 5700
-Wire Wire Line
-	3800 5700 3800 6100
-Connection ~ 3300 5700
-Wire Wire Line
-	3800 6400 3800 6550
-Wire Wire Line
-	3800 7000 3800 7150
-Wire Wire Line
-	3800 7150 3300 7150
-$Comp
-L Device:R R26
-U 1 1 5FCA9FEA
-P 6050 5350
-F 0 "R26" V 5843 5350 50  0000 C CNN
-F 1 "47k" V 5934 5350 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 5980 5350 50  0001 C CNN
-F 3 "~" H 6050 5350 50  0001 C CNN
-	1    6050 5350
-	0    1    1    0   
-$EndComp
-Wire Wire Line
-	6250 5900 6250 5350
-Wire Wire Line
-	6250 5350 6200 5350
-Connection ~ 6250 5900
-Wire Wire Line
-	5900 5350 4100 5350
-Wire Wire Line
-	4100 5350 4100 6550
-Wire Wire Line
-	4100 6550 3800 6550
-Connection ~ 3800 6550
-Wire Wire Line
-	3800 6550 3800 6700
-$Comp
-L Device:R R29
-U 1 1 5FCE9FC5
-P 6850 6250
-F 0 "R29" H 6920 6296 50  0000 L CNN
-F 1 "10k" H 6920 6205 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 6780 6250 50  0001 C CNN
-F 3 "~" H 6850 6250 50  0001 C CNN
-	1    6850 6250
-	1    0    0    -1  
-$EndComp
-$Comp
-L Device:R R28
-U 1 1 5FCEABC4
-P 6450 6800
-F 0 "R28" H 6520 6846 50  0000 L CNN
-F 1 "10k" H 6520 6755 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 6380 6800 50  0001 C CNN
-F 3 "~" H 6450 6800 50  0001 C CNN
-	1    6450 6800
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	6850 6100 6850 6000
-Connection ~ 6850 6000
-Wire Wire Line
-	6850 6400 6450 6400
 Wire Wire Line
 	6200 6400 6200 6100
-Wire Wire Line
-	6450 6650 6450 6400
-Connection ~ 6450 6400
-Wire Wire Line
-	6450 6400 6200 6400
-Wire Wire Line
-	6450 6950 6450 7150
-Wire Wire Line
-	6450 7150 5850 7150
-Connection ~ 5850 7150
 Text GLabel 1350 3850 2    50   Input ~ 0
 GND
 Text GLabel 7200 2650 2    50   Input ~ 0
@@ -1534,9 +1439,6 @@ Wire Wire Line
 Wire Wire Line
 	2850 7150 3300 7150
 Connection ~ 3300 7150
-Wire Wire Line
-	3800 7150 4600 7150
-Connection ~ 3800 7150
 Connection ~ 4600 7150
 Wire Wire Line
 	9700 3200 9750 3200
@@ -1723,7 +1625,7 @@ L Device:R R34
 U 1 1 5FC5C665
 P 8550 5650
 F 0 "R34" V 8450 5750 50  0000 C CNN
-F 1 "220k" V 8650 5650 50  0000 C CNN
+F 1 "33k" V 8650 5650 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8480 5650 50  0001 C CNN
 F 3 "~" H 8550 5650 50  0001 C CNN
 	1    8550 5650
@@ -1961,12 +1863,10 @@ S 9100 5600 1800 750
 U 6043B5C3
 F0 "High_Power" 50
 F1 "high_power.sch" 50
-F2 "Shunt1" I L 9100 5650 50 
-F3 "Shunt2" I L 9100 5950 50 
-F4 "GND" I L 9100 5800 50 
-F5 "GateDrive" I L 9100 6200 50 
-F6 "+veSense" I R 10900 5750 50 
-F7 "Shunt3" I L 9100 6100 50 
+F2 "Shunt" I L 9100 5650 50 
+F3 "GND" I L 9100 5800 50 
+F4 "GateDrive" I L 9100 6200 50 
+F5 "+veSense" I R 10900 5750 50 
 $EndSheet
 Wire Wire Line
 	7450 6200 7450 6000
@@ -1983,29 +1883,15 @@ F 3 "~" H 7850 4850 50  0001 C CNN
 	1    7850 4850
 	1    0    0    -1  
 $EndComp
-$Comp
-L Device:R R2
-U 1 1 604B76DF
-P 8800 5950
-F 0 "R2" V 8700 6050 50  0000 C CNN
-F 1 "220k" V 8900 5950 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8730 5950 50  0001 C CNN
-F 3 "~" H 8800 5950 50  0001 C CNN
-	1    8800 5950
-	0    -1   -1   0   
-$EndComp
-Wire Wire Line
-	8000 5950 8000 5650
 Wire Wire Line
 	8000 4650 7850 4650
 Connection ~ 7850 4650
 Wire Wire Line
 	8400 5650 8000 5650
-Connection ~ 8000 5650
 Wire Wire Line
 	8000 5650 8000 4650
 Wire Wire Line
-	9100 5650 8700 5650
+	9100 5650 8800 5650
 Wire Wire Line
 	8150 5050 8400 5050
 Wire Wire Line
@@ -2022,7 +1908,7 @@ Wire Wire Line
 Wire Wire Line
 	8400 5050 8850 5050
 Wire Wire Line
-	10950 5100 10950 5750
+	10950 5100 10950 5300
 Wire Wire Line
 	10800 3700 10800 3850
 Wire Wire Line
@@ -2104,26 +1990,66 @@ Wire Wire Line
 	1300 6950 1550 6950
 Wire Wire Line
 	1550 6750 1300 6750
+Wire Wire Line
+	3300 7150 4600 7150
+Wire Wire Line
+	8800 5650 8800 6400
+Connection ~ 8800 5650
+Wire Wire Line
+	8800 5650 8700 5650
 $Comp
-L Device:R R41
-U 1 1 60B8D712
-P 8300 6100
-F 0 "R41" V 8200 6200 50  0000 C CNN
-F 1 "220k" V 8400 6100 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 6100 50  0001 C CNN
-F 3 "~" H 8300 6100 50  0001 C CNN
-	1    8300 6100
+L Device:R R24
+U 1 1 60932C70
+P 7350 6400
+F 0 "R24" V 7250 6500 50  0000 C CNN
+F 1 "100R" V 7450 6400 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 7280 6400 50  0001 C CNN
+F 3 "~" H 7350 6400 50  0001 C CNN
+	1    7350 6400
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	9100 5950 8950 5950
+	8800 6400 7500 6400
 Wire Wire Line
-	8000 5950 8650 5950
+	7200 6400 6200 6400
+$Comp
+L Device:R R2
+U 1 1 60973393
+P 6050 5400
+F 0 "R2" V 5950 5500 50  0000 C CNN
+F 1 "150k" V 6150 5400 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 5980 5400 50  0001 C CNN
+F 3 "~" H 6050 5400 50  0001 C CNN
+	1    6050 5400
+	0    -1   -1   0   
+$EndComp
+Connection ~ 6200 6100
 Wire Wire Line
-	8150 6100 8000 6100
+	6200 5400 6200 6100
 Wire Wire Line
-	8000 6100 8000 5950
-Connection ~ 8000 5950
+	5900 5400 3300 5400
 Wire Wire Line
-	8450 6100 9100 6100
+	3300 5400 3300 5700
+Connection ~ 3300 5700
+$Comp
+L Device:R R25
+U 1 1 60A37C97
+P 10650 5300
+F 0 "R25" V 10443 5300 50  0000 C CNN
+F 1 "100k" V 10534 5300 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 10580 5300 50  0001 C CNN
+F 3 "~" H 10650 5300 50  0001 C CNN
+	1    10650 5300
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	10800 5300 10950 5300
+Connection ~ 10950 5300
+Wire Wire Line
+	10950 5300 10950 5750
+Wire Wire Line
+	10500 5300 10400 5300
+Wire Wire Line
+	10400 5300 10400 5050
+Connection ~ 10400 5050
 $EndSCHEMATC
