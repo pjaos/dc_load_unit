@@ -79,3 +79,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+#Freecad backup files
+*.FCStd1
