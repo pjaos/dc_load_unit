@@ -265,7 +265,7 @@ static float get_voltage(void) {
         set_audio_alarm(true);
     }
 
-#define DEBUG_VOLTAGE_READ
+#ifdef DEBUG_VOLTAGE_READ
     snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=%04x, voltage = %.1f, max_load_voltage_alarm=%d", voltage_adc, voltage, max_load_voltage_alarm);
     log_msg(LL_INFO, syslog_msg_buf);
 #endif
