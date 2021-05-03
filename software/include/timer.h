@@ -3,11 +3,8 @@
 
 void set_load(float factor);
 void set_target_amps(float amps);
-void set_target_watts(float watts);
 void init_timers(void);
-void set_target_watts(float watts);
 float get_target_amps(void);
-float get_target_watts(void);
 float get_amps(void);
 float get_volts(void);
 float get_watts(void);
@@ -28,5 +25,6 @@ void reset_max_load_voltage_alarm(void);
 void set_max_pwm(float pwm);
 bool get_audio_alarm(void);
 void set_audio_alarm(bool on);
+bool get_max_watts_alarm(void);
 
 #endif /* SRC_INCLUDE_TIMERS_H_ */

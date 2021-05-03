@@ -145,34 +145,6 @@ static void mgos_rpc_ydev_set_amps(struct mg_rpc_request_info *ri,
 }
 
 /*
- * @brief Callback handler to set set the target watts value.
- *        This is not used at the moment as the amps value can vary as the voltage changes.
- * @param ri
- * @param cb_arg
- * @param fi
- * @param args
- */
-static void mgos_rpc_ydev_set_watts(struct mg_rpc_request_info *ri,
-                                         void *cb_arg,
-                                         struct mg_rpc_frame_info *fi,
-                                         struct mg_str args) {
-
-    float watts;
-
-    if (json_scanf(args.p, args.len, ri->args_fmt, &watts) == 1) {
-      mg_rpc_send_responsef(ri, "%f", watts);
-      set_target_watts(watts);
-    } else {
-      mg_rpc_send_errorf(ri, -1, "Bad request. Expected: {\"watts\":value}");
-    }
-
-    (void) ri;
-    (void) cb_arg;
-    (void) fi;
-    (void) args;
-}
-
-/*
  * @brief Callback handler to set set the debug level.
  * @param ri
  * @param cb_arg
@@ -249,6 +221,7 @@ static void mgos_rpc_get_config(struct mg_rpc_request_info *ri,
     uint8_t syslog_enabled = mgos_sys_config_get_ydev_enable_syslog();
     uint32_t max_pp_count = mgos_sys_config_get_ydev_max_pp_count();
     float load_off_voltage = mgos_sys_config_get_ydev_load_off_voltage();
+    float max_watts = mgos_sys_config_get_ydev_max_watts();
 
     if( unit_name == NULL ) {
         unit_name = "";
@@ -264,7 +237,7 @@ static void mgos_rpc_get_config(struct mg_rpc_request_info *ri,
                               "syslog_enabled:%d,"
                               "max_pp_count:%d,"
                               "target_amps:%.001f,"
-                              "target_watts:%.1f,"
+                              "max_watts:%.1f,"
                               "load_off_voltage:%f"
                               "}"
                               ,
@@ -273,7 +246,7 @@ static void mgos_rpc_get_config(struct mg_rpc_request_info *ri,
                               syslog_enabled,
                               max_pp_count,
                               get_target_amps(),
-                              get_target_watts(),
+                              max_watts,
                               load_off_voltage
                               );
 
@@ -286,13 +259,15 @@ static void mgos_rpc_get_config(struct mg_rpc_request_info *ri,
 "group_name:%Q,"\
 "enable_syslog:%d,"\
 "max_pp_count:%d,"\
-"load_off_voltage:%f}"
+"load_off_voltage:%f,"\
+"max_watts:%f}"
 
 #define SET_CONFIG_JSON_SCANF_ARGS &dev_name,\
 &group_name,\
 &enable_syslog,\
 &max_pp_count,\
-&load_off_voltage
+&load_off_voltage,\
+&max_watts
 
 /*
  * @brief Callback handler to allow the user parameters be set from the web page.
@@ -310,15 +285,17 @@ static void mgos_rpc_set_config(struct mg_rpc_request_info *ri,
     int  enable_syslog=0;
     int  max_pp_count=0;
     float load_off_voltage=0.0;
+    float max_watts=0.0;
     log_mg_str(LL_INFO, &args);
 
-    if(  json_scanf(args.p, args.len, ri->args_fmt, SET_CONFIG_JSON_SCANF_ARGS) == 5 ) {
-        mg_rpc_send_responsef(ri, "%s, %s, %d, %d, %f",dev_name, group_name, enable_syslog, max_pp_count, load_off_voltage);
+    if(  json_scanf(args.p, args.len, ri->args_fmt, SET_CONFIG_JSON_SCANF_ARGS) == 6 ) {
+        mg_rpc_send_responsef(ri, "%s, %s, %d, %d, %f, %f",dev_name, group_name, enable_syslog, max_pp_count, load_off_voltage, max_watts);
         mgos_sys_config_set_ydev_unit_name(dev_name);
         mgos_sys_config_set_ydev_group_name(group_name);
         mgos_sys_config_set_ydev_enable_syslog(enable_syslog);
         mgos_sys_config_set_ydev_max_pp_count(max_pp_count);
         mgos_sys_config_set_ydev_load_off_voltage(load_off_voltage);
+        mgos_sys_config_set_ydev_max_watts(max_watts);
         saveConfig();
     }
 
@@ -361,6 +338,7 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
     int min_load_voltage_alarm = get_min_load_voltage_alarm();
     int max_load_voltage_alarm = get_max_load_voltage_alarm();
     int audio_alarm = get_audio_alarm();
+    int max_watts_alarm = get_max_watts_alarm();
 
     mg_rpc_send_responsef(ri, "{"
                               "amps:%f,"
@@ -377,7 +355,8 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               "previous_load_on_secs:%f,"
                               "min_load_voltage_alarm:%d,"
                               "max_load_voltage_alarm:%d,"
-                              "audio_alarm:%d"
+                              "audio_alarm:%d,"
+                              "max_watts_alarm:%d"
                               "}"
                               ,
                               amps,
@@ -394,7 +373,8 @@ static void mgos_rpc_get_stats(struct mg_rpc_request_info *ri,
                               previous_load_on_secs,
                               min_load_voltage_alarm,
                               max_load_voltage_alarm,
-                              audio_alarm
+                              audio_alarm,
+                              max_watts_alarm
                               );
 
     (void) cb_arg;
@@ -635,7 +615,6 @@ void rpc_init(void) {
         mg_rpc_add_handler(con, "set_config", SET_CONFIG_RPC_JSON_STRING, mgos_rpc_set_config, NULL);
         mg_rpc_add_handler(con, "pwm", "{pwm: %f}",             mgos_rpc_ydev_set_pwm, NULL);
         mg_rpc_add_handler(con, "target_amps", "{amps: %f}",    mgos_rpc_ydev_set_amps, NULL);
-        mg_rpc_add_handler(con, "target_power", "{watts: %f}",  mgos_rpc_ydev_set_watts, NULL);
         mg_rpc_add_handler(con, "debug", "{level: %d}",         mgos_sys_set_debug_handler, NULL);
         mg_rpc_add_handler(con, "pid_coeffs", "{P:%f,I:%f,D:%f}",      mgos_rpc_ydev_set_pid_coeffs, NULL);
         mg_rpc_add_handler(con, "set_current_cal", "{cal: %f}",         mgos_sys_set_current_cal_handler, NULL);

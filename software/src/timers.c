@@ -14,7 +14,8 @@
 #define ADS111X_I2C_ADDRESS 72
 #define PWM_PIN             12
 #define PWM_FREQ            78000
-#define VOLTAGE_CNV_FACTOR  225.38
+//#define VOLTAGE_CNV_FACTOR  225.38
+#define VOLTAGE_CNV_FACTOR  140.25
 #define MCP9700_CODES_PER_VOLT 16022.0
 #define MCP9700_VOUT_0C        0.5
 #define MCP9700_TC             0.01
@@ -32,9 +33,9 @@
 #define OFF_LOAD_FACTOR 0.15 //The PWM value at which the load is off
 #define OFF_VOLTAGE 0.05     //If the voltage is lower than this the load is considered off
 
-#define DEFAULT_PROPORTIONAL_COEFF 0.009
-#define DEFAULT_INTEGRAL_COEFF 0.001
-#define DEFAULT_DERIVATIVE_COEFF 0.001
+#define DEFAULT_PROPORTIONAL_COEFF 0.08
+#define DEFAULT_INTEGRAL_COEFF 0.04
+#define DEFAULT_DERIVATIVE_COEFF 0.000
 
 #define MAX_VOLTAGE 100 //The max voltage that should be applied to the load.
 #define MAX_AMPS 10.0
@@ -44,6 +45,24 @@
 
 #define BUZZER_GPIO 4 // The GPIO pin that the buzzer is connected to.
 #define WARNING_TONE_PERIOD_MS 500
+
+//If enabled this reports the memory usage on the serial output and via syslog
+//#define REPORT_MEM_USAGE 1
+
+//If enabled this sets the unit to a mode where the REST pwm call must be used to set the PWM load output directly.
+//#define PWM_DEBUG 1
+
+//If enabled this reports the temp device reads on the serial output and via syslog
+//#define SHOW_TEMP_DEBUG 1
+
+//If enabled this reports the load input voltage debug on the serial port and via syslog
+//#define DEBUG_VOLTAGE_READ 1
+
+//If enabled this reports pid loop debug info on the serial port and via syslog
+#define PID_LOOP_DEBUG 1
+
+//If enabled this reports attempts to set the load (from user) on the serial port and via syslog
+#define SET_LOAD_DEBUG 1
 
 static bool warningToneOn = false; //If true then the buzzer will emit a tone
 static bool warningToneHigh = false; //If the warning tone is on and this is true then a high warning tone will be heard.
@@ -55,86 +74,100 @@ static float kD = DEFAULT_DERIVATIVE_COEFF;
 
 extern char syslog_msg_buf[SYSLOG_MSG_BUF_SIZE];
 
-//Note The target value can either be the required amps or the required power, not both.
-//     If target_watts is set then the target amps is set using the current voltage.
-float target_amps = 0.0;
-float target_watts = 0.0;
-bool  temp_alarm = false;
-float temp_now = 0.0;
-float amps_now = 0.0;
-float volts_now = 0.0;
-float watts_now = 0.0;
-float pwmValue = 0.0;
-float maxPWMValue=1.0;
+float target_amps                   = 0.0;
+bool  target_amps_changed           = false;
+float max_watts                     = 0.0;
+bool  temp_alarm                    = false;
+float temp_now                      = 0.0;
+float amps_now                      = 0.0;
+float volts_now                     = 0.0;
+float watts_now                     = 0.0;
+float pwmValue                      = 0.0;
+float maxPWMValue                   = 1.0;
 
-float min_load_voltage   = 0.0;
-bool  min_load_voltage_alarm = false;
-bool  load_on            = false;
-bool  last_load_on_state = false;
-int64_t start_load_on_time_usecs  = 0.0; //The time at which the load was last switched on
-int64_t stop_load_on_time_usecs  = 0.0; //The time at which the load was switched off
-int64_t last_pid_loop_us = 0;
-float ampSeconds         = 0.0;
-float amp_microseconds   = 0.0;
-float watt_microseconds  = 0.0;
-float previous_amp_microseconds   = 0.0;
-float previous_watt_microseconds  = 0.0;
-bool  max_load_voltage_alarm = false;
+float min_load_voltage              = 0.0;
+bool  min_load_voltage_alarm        = false;
+bool  load_on                       = false;
+bool  last_load_on_state            = false;
+bool  max_watts_alarm               = true;
+int64_t start_load_on_time_usecs    = 0.0; //The time at which the load was last switched on
+int64_t stop_load_on_time_usecs     = 0.0; //The time at which the load was switched off
+int64_t last_pid_loop_us            = 0;
+float ampSeconds                    = 0.0;
+float amp_microseconds              = 0.0;
+float watt_microseconds             = 0.0;
+float previous_amp_microseconds     = 0.0;
+float previous_watt_microseconds    = 0.0;
+bool  max_load_voltage_alarm        = false;
 
-#define LUT_TEST_VOLTAGE 10.0
-#define PWM_TABLE_SIZE 10
+#define PWM_TABLE_SIZE 19
+//Lookup table for relationship between amps and PWM value
+//First column is amps, second column is PWM value
+//These values were arrived at testing by setting the PWM value and measuring the current.
 static float pwm_lut[PWM_TABLE_SIZE][2] = {
-{170, 0.315},
-{100, 0.328},
-{41,  0.357},
-{19.9,  0.389},
-{16.3,  0.4},
-{8.1,  0.45},
-{5.0, 0.5},
-{3.1, 0.6},
-{2.4, 0.7},
-{2.1, 0.8},
+        {0.016, 0.002},
+        {0.042, 0.003},
+        {0.068, 0.004},
+        {0.095, 0.005},
+        {0.122, 0.006},
+        {0.148, 0.007},
+        {0.174, 0.008},
+        {0.201, 0.009},
+        {0.227, 0.010},
+        {0.49,  0.020},
+        {0.905, 0.035},
+        {2.022, 0.077},
+        {3.63,  0.141},
+        {5.01,  0.201},
+        {6.0,   0.247},
+        {6.8,   0.292},
+        {7.7,   0.341},
+        {8.5,   0.39},
+        {9.6,   0.457},
 };
 
 /**
  * @brief Get the load resistance index.
- * @param loadr The load resistance.
- * @param high If 1 then take the value above >= the loadr in the table, else take the <= the loadr in the table.
+ * @param amps The required load current in amps.
+ * @param high If 1 then take the value above >= the a in the pwm_lut table, else take the <= the pwm_lut in the table.
  * @return The pwm table index.
  */
-static int get_loadr_index(float _loadr, int high) {
+static int get_amps_index(float amps, int high) {
     int index=0, s_index=0;
-    //The LUT values were taken at LUT_TEST_VOLTAGE, we need to adjust for this.
-    //At higher voltages a lower
-    float adj_factor = volts_now/LUT_TEST_VOLTAGE;
-    float loadr = _loadr*adj_factor;
 
-    for( index=0 ; index <PWM_TABLE_SIZE ; index++ ) {
-        if( high ) {
-            if ( pwm_lut[index][0] >= loadr ) {
-                s_index = index;
-                break;
-            }
-        } else {
-            if( pwm_lut[index][0] <= loadr ) {
+    if( high ) {
+        //Search from bottom up to find first value >= amps
+        for( index=0 ; index <PWM_TABLE_SIZE ; index++ ) {
+            if ( pwm_lut[index][0] >= amps ) {
                 s_index = index;
                 break;
             }
         }
     }
+    else  {
+        //Search from top down to find first value <= amps
+        for( index=PWM_TABLE_SIZE-1 ; index >= 0 ; index-- ) {
+            if( pwm_lut[index][0] <= amps ) {
+                s_index = index;
+                break;
+            }
+        }
+    }
+
     return s_index;
 }
 
 /**
- * @brief Determine the PWM value to give the required load resistance.
- *        This uses the pwm look up table and performs linear interpolation.
- * @param load_resistance The required load resistance in ohms.
+ * @brief Determine the PWM value to give the required load current.
+ *        This uses the pwm look up table and performs linear interpolation to determine the PWM value.
+ * @param amps The required load current in amps.
  * @return the pwm value to set.
  */
-static float get_pwm_value(float loadr) {
+static float get_pwm_value(float amps) {
     float x0,y0,x1,y1;
-    int low_index = get_loadr_index(loadr, 0);
-    int high_index = get_loadr_index(loadr, 1);
+    int low_index = get_amps_index(amps, 0);
+    int high_index = get_amps_index(amps, 1);
+
     //If we have the exact value
     if( low_index == high_index ) {
         return pwm_lut[low_index][1];
@@ -145,7 +178,7 @@ static float get_pwm_value(float loadr) {
     x1= pwm_lut[high_index][0];
     y1= pwm_lut[high_index][1];
 
-    return y0 + ((y1-y0)/(x1-x0)) * (loadr - x0);
+    return y0 + ((y1-y0)/(x1-x0)) * (amps - x0);
 }
 
 /**
@@ -202,8 +235,10 @@ static float get_temp(void) {
     float mcp9700_volts = temp_adc / MCP9700_CODES_PER_VOLT;
     float tempC = ( mcp9700_volts - MCP9700_VOUT_0C ) / MCP9700_TC;
 
-//PJA    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "temp_adc=0x%04x, mcp9700_volts=%.3f, tempC=%.1f C, temp_alarm=%d", temp_adc, mcp9700_volts, tempC, temp_alarm);
-//    log_msg(LL_INFO, syslog_msg_buf);
+#ifdef SHOW_TEMP_DEBUG
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "temp_adc=0x%04x, mcp9700_volts=%.3f, tempC=%.1f C, temp_alarm=%d", temp_adc, mcp9700_volts, tempC, temp_alarm);
+    log_msg(LL_INFO, syslog_msg_buf);
+#endif
 
     return tempC;
 }
@@ -230,8 +265,10 @@ static float get_voltage(void) {
         set_audio_alarm(true);
     }
 
-//PJA    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=%04x, voltage = %.1f, max_load_voltage_alarm=%d", voltage_adc, voltage, max_load_voltage_alarm);
-//    log_msg(LL_INFO, syslog_msg_buf);
+#define DEBUG_VOLTAGE_READ
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "voltage_adc=%04x, voltage = %.1f, max_load_voltage_alarm=%d", voltage_adc, voltage, max_load_voltage_alarm);
+    log_msg(LL_INFO, syslog_msg_buf);
+#endif
 
     return voltage;
 }
@@ -254,7 +291,7 @@ static float get_current() {
 
     float amps = ( (adc_value-no_amps_codes) / CODES_PER_AMP) * amps_cal_value;
 
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "adc_value=%04x, amps=%.3f", adc_value, amps_now);
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "adc_value=%04x, amps=%.3f", adc_value, amps);
     log_msg(LL_INFO, syslog_msg_buf);
 
     //amps cannot go negative
@@ -323,6 +360,14 @@ void reset_min_load_voltage_alarm(void) {
  */
 bool get_max_load_voltage_alarm(void) {
     return max_load_voltage_alarm;
+}
+
+/**
+ * @brief Get the max watts alarm state.
+ * @return True if the alarm is set
+ */
+bool get_max_watts_alarm(void) {
+    return max_watts_alarm;
 }
 
 /**
@@ -395,8 +440,10 @@ static float get_pid_power(float t_amps, float amps)
         power = error*kP + integral*kI + derivative*kD;
     }
 
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "PJA: *******************************> t_amps=%.6f, amps=%.6f, power=%.6f, kP=%.6f, kI=%.6f, kD=%.6f", t_amps, amps, power, kP, kI, kD);
+#ifdef PID_LOOP_DEBUG
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "get_pid_power(): amps_t=%.6f, amps=%.6f, power=%.6f, kP=%.6f, kI=%.6f, kD=%.6f", t_amps, amps, power, kP, kI, kD);
     log_msg(LL_INFO, syslog_msg_buf);
+#endif
 
     return power;
 }
@@ -502,9 +549,6 @@ static void update_load(float amps, float watts) {
 
     update_usage_stats(amps, watts);
 
-//PJA    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "amp_microseconds=%.1f, watt_microseconds=%f", amp_microseconds, watt_microseconds);
-//    log_msg(LL_INFO, syslog_msg_buf);
-
 }
 
 /**
@@ -548,11 +592,12 @@ static void set_initial_load_current(double amps) {
         set_load_off();
     }
     else if( volts_now > 0 ) {
-        float load_resistance = volts_now/target_amps;
-        float pwm = get_pwm_value(load_resistance);
+        float pwm = get_pwm_value(amps);
         set_load(pwm);
-        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "PJA: ------------------------> amps = %.3f, volts = %.1f, load R = %.1f, pwmValue=%.3f", amps, volts_now, load_resistance, pwmValue);
+#ifdef SET_LOAD_DEBUG
+        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "set_initial_load_current(): amps = %.3f, volts = %.1f, pwmValue=%.3f", amps, volts_now, pwmValue);
         log_msg(LL_INFO, syslog_msg_buf);
+#endif
     }
 }
 
@@ -566,7 +611,9 @@ static void pid_loop_cb(void *arg) {
     float watts = 0;
 
     min_load_voltage = mgos_sys_config_get_ydev_load_off_voltage();
+    max_watts = mgos_sys_config_get_ydev_max_watts();
 
+    //Limit the min volts
     if( volts < 0.03 ) {
         volts = 0.0;
     }
@@ -594,15 +641,15 @@ static void pid_loop_cb(void *arg) {
     }
 
     amps = get_current();
-    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "load_on=%d, volts = %.1f, amps=%.3f, warningToneOn=%d", load_on, volts, amps, warningToneOn);
+    snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "load_on=%d, volts = %.1f, amps=%.3f, pwmValue=%.4f, warningToneOn=%d", load_on, volts, amps, pwmValue, warningToneOn);
     log_msg(LL_INFO, syslog_msg_buf);
 
     watts = amps * volts;
-
-    //if the user has requested watts
-    if( target_watts > 0 ) {
-        //Calc the amps based on the voltage just read.
-        target_amps = target_watts / volts;
+    if( watts > max_watts ) {
+        max_watts_alarm = true;
+    }
+    else {
+        max_watts_alarm = false;
     }
 
     if( !load_on ) {
@@ -622,10 +669,17 @@ static void pid_loop_cb(void *arg) {
         else {
             stop_recording_load_stats(amps, watts);
         }
+        target_amps_changed = false;
         last_load_on_state = load_on;
     }
     else if( load_on ) {
-        update_load(amps, watts);
+        if( target_amps_changed ) {
+            set_initial_load_current(target_amps);
+            target_amps_changed = false;
+        }
+        else {
+            update_load(amps, watts);
+        }
     }
 
     amps_now = amps;
@@ -643,7 +697,7 @@ static void pid_loop_cb(void *arg) {
  * @param freqHz The output freq in Hz.
  */
 static void warningTone(bool on, int freqHz) {
-    if( on ) {
+    if( load_on && on ) {
         mgos_pwm_set(BUZZER_GPIO, freqHz, 0.5);
     }
     else {
@@ -652,8 +706,7 @@ static void warningTone(bool on, int freqHz) {
 }
 
 /***
- * PJA
- * @brief Called when testing the control of the voltage and current measurement.
+ * @brief Called when testing the control of the voltage and current measurement using the pwm REST method.
  */
 static void TESTpid_loop_cb(void *arg) {
     if( pwmValue > 0.0 ) {
@@ -720,7 +773,7 @@ void set_load(float factor) {
     if( factor < maxPWMValue ) {
         mgos_pwm_set(PWM_PIN, PWM_FREQ, factor);
         pwmValue = factor;
-        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "-----------> SET PWM LOAD VALUE: %.6f", factor);
+        snprintf(syslog_msg_buf, SYSLOG_MSG_BUF_SIZE, "-----------> SET_PWM=%.6f", factor);
         log_msg(LL_INFO, syslog_msg_buf);
     }
     else {
@@ -734,10 +787,11 @@ void set_load(float factor) {
  * @return void
  */
 void set_target_amps(float amps) {
-    //If we set the required amps value reset any previous request for power.
-    target_watts = 0.0;
-    if( amps <= MAX_AMPS ) {
+    float load_watts = volts_now * amps;
+    //Don't allow the RPC interface to set higher than the max amps or watts.
+    if( amps <= MAX_AMPS && load_watts <= max_watts ) {
         target_amps = amps;
+        target_amps_changed = true;
     }
 }
 
@@ -747,22 +801,6 @@ void set_target_amps(float amps) {
  */
 float get_target_amps(void) {
     return target_amps;
-}
-
-/**
- * @brief Set the target watts value.
- * @return void
- */
-void set_target_watts(float watts) {
-    target_watts = watts;
-}
-
-/**
- * @brief Get the target watts value.
- * @return the target watts.
- */
-float get_target_watts(void) {
-    return target_watts;
 }
 
 /**
@@ -796,11 +834,20 @@ static void warning_tone_cb(void *arg) {
  */
 void init_timers(void) {
     last_pid_loop_us = mgos_uptime_micros();
+    max_watts = mgos_sys_config_get_ydev_max_watts();
 
-//PJA
-//    mgos_set_timer(MEM_USAGE_TIMER_PERIOD_MS, MGOS_TIMER_REPEAT, mem_usage_cb, NULL);
+#ifdef REPORT_MEM_USAGE
+    mgos_set_timer(MEM_USAGE_TIMER_PERIOD_MS, MGOS_TIMER_REPEAT, mem_usage_cb, NULL);
+#endif
+
     mgos_set_timer(POLL_TEMP_TIMER_PERIOD_MS, MGOS_TIMER_REPEAT, temp_cb,  NULL);
-    mgos_set_timer(PID_LOOP_TIMER_PERIOD_MS,  MGOS_TIMER_REPEAT, pid_loop_cb,  NULL);
-    mgos_set_timer(WARNING_TONE_PERIOD_MS,  MGOS_TIMER_REPEAT, warning_tone_cb,  NULL);
 
+#ifdef PWM_DEBUG
+    // This is only used when debugging and setting the PWM directly using the REST pwm command.
+    mgos_set_timer(PID_LOOP_TIMER_PERIOD_MS,  MGOS_TIMER_REPEAT, TESTpid_loop_cb,  NULL);
+#else
+    mgos_set_timer(PID_LOOP_TIMER_PERIOD_MS,  MGOS_TIMER_REPEAT, pid_loop_cb,  NULL);
+#endif
+
+    mgos_set_timer(WARNING_TONE_PERIOD_MS,  MGOS_TIMER_REPEAT, warning_tone_cb,  NULL);
 }

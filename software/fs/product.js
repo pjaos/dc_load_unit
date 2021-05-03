@@ -1,4 +1,4 @@
-const DEBUG                 = false;
+const DEBUG                 = true;
 const WATS_PLOT_AREA_ID     = "wattsPlotArea";
 const AMPS_PLOT_AREA_ID     = "ampsPlotArea";
 const VOLTS_PLOT_AREA_ID    = "voltsPlotArea";
@@ -6,8 +6,7 @@ const TEMP_PLOT_AREA_ID     = "tempPlotArea";
 const DIAL_TICK_COUNT_6     = 6;
 const DIAL_DECIMAL_PLACES   = 1;
 const MAX_AMPS              = 10.0;
-const MAX_WATTS             = 200;
-
+const MAX_LOAD_POWER        = 300;
 const GUAGE_SIZE            = 250;
 const MAX_FACTOR            = 1.8;
 
@@ -26,6 +25,7 @@ var devNameField = document.getElementById("devNameText");
 var groupNameField = document.getElementById("groupNameText");
 var enableSyslogCB = document.getElementById("syslogEnableCheckbox");
 var maxPwrPlotPointsField = document.getElementById("maxPwrPlotPoints");
+var maxWattsField = document.getElementById("maxWatts");
 var loadShutdownVoltageField = document.getElementById("loadShutdownVoltage");
 var loadOnTimeField = document.getElementById("loadOnTime");
 var lastLoadOnTimeField = document.getElementById("lastLoadOnTime");
@@ -41,6 +41,7 @@ var ampHoursGuage;
 var wattHoursGuage;
 var lastAmpHoursGuage;
 var lastWattHoursGuage;
+var maxWatts
 
 /**
  * @brief A UserOutput class responsible for displaying log messages
@@ -484,7 +485,7 @@ function updateView(updateConfig) {
  * @returns
  */
 function handleTempAlarm() {
-    alert("!!! Maximum temperature reached and load turned off !!!");
+    alert("!!! Maximum temperature reached. Therefore the load has been turned off !!!");
     //Reset the temp alarm on the dc load unit.
     $.ajax({
         url: '/rpc/reset_temp_alarm',
@@ -499,7 +500,7 @@ function handleTempAlarm() {
  * @returns
  */
 function handleMinLoadVoltageAlarm() {
-    alert("Load turned off as the load voltage is below "+loadShutdownVoltageField.value+" volts.");
+    alert("Load turned off as the load voltage has dropped to "+loadShutdownVoltageField.value+" volts.");
     //Reset the min voltage alarm on the dc load unit.
     $.ajax({
         url: '/rpc/reset_min_load_voltage_alarm',
@@ -515,7 +516,6 @@ function handleMinLoadVoltageAlarm() {
  * @returns
  */
 function handleMaxLoadVoltageAlarm() {
-    alert("Turned off as the load current as the voltage is above the maximum value of 200 volts.\n\n!!! Reduce the load voltage or damage to the DC Load Unit may occur.");
     //Reset the max voltage alarm on the dc load unit.
     $.ajax({
         url: '/rpc/reset_max_load_voltage_alarm',
@@ -523,6 +523,29 @@ function handleMaxLoadVoltageAlarm() {
         success: function(data) {
         },
     })
+    alert("Turned off as the load current as the voltage is above the maximum value of 100 volts.\n\n!!! Reduce the load voltage or damage to the DC Load Unit may occur.");
+    getStats();
+}
+
+
+/**
+ * @brief Handle max watts alarm.
+ * @returns
+ */
+function handleMaxWattsAlarm() {
+    //Turn off the load.
+    var jsonStr = JSON.stringify({
+        amps: 0,
+    }, null, '\t');
+    $.ajax({
+        url: '/rpc/target_amps',
+        data: jsonStr,
+        type: 'POST',
+        success: function(data) {
+        },
+    })
+    alert("Turned off as the load load power was higher than the max of "+maxWatts+" watts.");
+    getStats();
 }
 
 /**
@@ -561,9 +584,11 @@ function getConfig() {
             var targetAmps = data["target_amps"];
             targetAmpsField.value = targetAmps;
 
-            //Not used
-            var targetWatts = data["target_watts"];
-            loadShutdownVoltageField.value =  data["load_off_voltage"];
+            maxWatts = data["max_watts"];
+            maxWattsField.value = maxWatts;
+            
+            var shutDownVoltage = data["load_off_voltage"];
+            loadShutdownVoltageField.value = shutDownVoltage;
 
         }
     });
@@ -678,6 +703,11 @@ function getStats() {
             else {
                 audioAlarmDiv.style.display = "none";
             }
+            
+            var maxWattsAlarm = data["max_watts_alarm"];;
+            if( maxWattsAlarm ) {
+                handleMaxWattsAlarm();
+            }
         }
     });
 }
@@ -715,10 +745,10 @@ function setTargetAmps() {
         return;
 	}
 	
-	var expectedWatts = voltsGauge.value * targetAmps;
-	if ( expectedWatts > MAX_WATTS ){
-        alert("This would set the load to "+expectedWatts+" watts (max watts = "+MAX_WATTS+").");
-        return;
+	var power = voltsGauge.value*targetAmps;
+	if( power > maxWattsField.value ) {
+        alert("Setting the target current to "+targetAmps+" amps would set load power to "+power.toFixed(1)+" watts (max = "+maxWattsField.value+").");
+        return;	    
 	}
 
     var jsonStr = JSON.stringify({
@@ -762,11 +792,17 @@ function setConfig() {
     var  groupName = groupNameField.value;
     var _enable_syslog=0;
     var  shutDownVoltage = loadShutdownVoltageField.value;
+    var  maxWatts = maxWattsField.value;
+    
     if( enableSyslogCB.checked ) {
         _enable_syslog=1;
     }
     if( maxPwrPlotPointsField.value < 10) {
         alert("A minimum of 10 plot points must be set.");
+        return;
+    }
+    if( maxWatts > MAX_LOAD_POWER ) {
+        alert("The maximum power that can be set is "+MAX_LOAD_POWER+" watts.");
         return;
     }
     var maxPPCount = maxPwrPlotPointsField.value;
@@ -777,6 +813,7 @@ function setConfig() {
         enable_syslog:_enable_syslog,
         max_pp_count: maxPPCount,
         load_off_voltage: shutDownVoltage,
+        max_watts: maxWatts,
    }, null, '\t');
 
    $.ajax({
