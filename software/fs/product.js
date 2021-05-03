@@ -9,6 +9,7 @@ const MAX_AMPS              = 10.0;
 const MAX_LOAD_POWER        = 300;
 const GUAGE_SIZE            = 250;
 const MAX_FACTOR            = 1.8;
+const MAX_DC_LOAD_WATTS     = 280.0;
 
 var setAmpsButton        = document.getElementById("set_current");
 var resetAmpsButton        = document.getElementById("reset_current");
@@ -793,6 +794,11 @@ function setConfig() {
     var _enable_syslog=0;
     var  shutDownVoltage = loadShutdownVoltageField.value;
     var  maxWatts = maxWattsField.value;
+    
+    if( maxWatts > MAX_DC_LOAD_WATTS ) {
+        alert("The maximum power the load unit can handle is "+MAX_DC_LOAD_WATTS+" Watts.");
+        return;
+    }
     
     if( enableSyslogCB.checked ) {
         _enable_syslog=1;
