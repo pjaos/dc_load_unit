@@ -12,6 +12,10 @@ I used an ESP32 processor in the design as the main processor using  [Mongoose O
 ![Sheet 1](images/schematic_sheet_1.png)
 ![Sheet 1](images/schematic_sheet_2.png)
 
+From the schematic a PCB was created as shown below
+
+![Sheet 1](images/dc_load_unit_pcb.png)
+
 Tests on completion of the load unit showed it was capable of providing a load of 280W.
 
 - Images of the completed unit.
